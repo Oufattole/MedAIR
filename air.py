@@ -1,5 +1,3 @@
-from elasticsearch import Elasticsearch, helpers
-from elasticsearch_dsl import Q, Search, MultiSearch
 from nltk.tokenize import word_tokenize
 import query_token
 

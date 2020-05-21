@@ -14,7 +14,7 @@ from sklearn.utils import murmurhash3_32
 from gensim.models import KeyedVectors
 from gensim.test.utils import datapath
 import utils
-
+import pandas as pd
 
 
 
@@ -60,8 +60,9 @@ def filter_word(text):
 
 
 def load_glove_emb():
-    wv_from_txt = KeyedVectors.load_word2vec_format("glovewv.txt", binary=False)  # C bin format
-    return wv_from_bin
+    df = pd.read_csv('glove.840B.300d.txt', sep=" ", quoting=3, header=None, index_col=0)
+    glove = {key: val.values for key, val in df.T.items()}
+    return glove
 
 def load_biosentvec_emb(limit = 5):
     wv_from_bin = KeyedVectors.load_word2vec_format("BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary=True,limit=limit)  # C bin format

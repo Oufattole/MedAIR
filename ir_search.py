@@ -11,6 +11,7 @@ import jsonlines
 from air import AIR
 import numpy as np 
 import utils
+import timeit
 
 class InformationRetrieval():
     """
@@ -20,8 +21,12 @@ class InformationRetrieval():
     """
     def __init__(self, topn = 50, data_name="dev", output=False, tokenize=False):
         self.title = 0
+        print("loading word embedding")
         self.wv=utils.load_glove_emb() # dict word string to word vec
+        print("success")
+        print("loading corpus")
         self.corpus = utils.load_corpus() # list of string docs
+        print("success")
         self.topn = topn
         self.question_filename = data_name+".jsonl"
         self.data_name = data_name
@@ -34,7 +39,7 @@ class InformationRetrieval():
         self.processes = 1
         self.questions = Question.read_jsonl(self.question_filename)
         # random.shuffle(self.questions)
-        # self.questions = self.questions[:40]
+        self.questions = self.questions[:1]
         print(f"Number of Questions loaded: {len(self.questions)}")
 
     def score(self, hits):
@@ -98,7 +103,7 @@ class InformationRetrieval():
                 yield result
                 result = []
 
-    def answer_all_questions_in_partition(self,questions,i):
+    def answer_all_questions_in_partition(self,questions):
         correct_count = 0
         total = 0
         #Search all queries
@@ -113,19 +118,17 @@ class InformationRetrieval():
         interval_length = length//self.processes
         start = interval_length*i 
         end = start+interval_length if i < self.processes-1 else length
-        return self.answer_all_questions_in_partition(self.questions[start:end], i)
+        return self.answer_all_questions_in_partition(self.questions[start:end])
 
     def run(self):
-        start = time.time()
-        pool = Pool(processes=self.processes)
-        results = pool.map(self.do_answer_partition, range(0, self.processes))
+        # pool = Pool(processes=self.processes)
+        results = self.answer_all_questions_in_partition(self.questions) # pool.map(self.do_answer_partition, range(0, self.processes))
         tokenize = " tokenize" if self.tokenize else ""
         print(f"{self.data_name + tokenize}; top: {self.topn}; Accuracy: {sum(results)/len(self.questions)}")
-        print(time.time()-start)
 
 def paragraph(topn, data_name,output,tokenize):
     solver = InformationRetrieval(topn=topn, data_name = data_name, output=output,tokenize=tokenize)  # pylint: disable=invalid-name
-    solver.run()
+    print(f"elapsed time: {timeit.timeit(solver.run(),1)}")
 
 if __name__ == "__main__":
     dev = True
