@@ -21,8 +21,10 @@ class InformationRetrieval():
     """
     def __init__(self, topn = 50, data_name="dev", output=False, tokenize=False):
         self.title = 0
+        self.tokenize=tokenize
         print("loading word embedding")
-        self.wv=utils.load_glove_emb() # dict word string to word vec
+        #self.wv=utils.load_glove_emb() # dict word string to word vec
+        self.wv={"the":np.array([1,0,0])}
         print("success")
         print("loading corpus")
         self.corpus = utils.load_corpus() # list of string docs
@@ -89,8 +91,8 @@ class InformationRetrieval():
             option_mult = (" " + option)
             search_string = question_nouns + option_mult
         
-        ir = AIR(self.corpus_data,self.wv)
-        alignment_scores = ir.alignment_scores(search_string)
+        ir = AIR(self.corpus,self.wv)
+        alignment_scores = ir.alignment(search_string)
         topn_indexes = np.argpartition(a, - self.topn)[- self.topn:] # corpus indexes of topn scores
         score = sum([alignment_scores[index] for index in topn_indexes])
         return topn_indexes, score

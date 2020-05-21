@@ -1,5 +1,5 @@
 from nltk.tokenize import word_tokenize
-import query_token
+from query_token import Query_Token
 
 class AIR:
     """
@@ -10,7 +10,7 @@ class AIR:
         self.corpus_data = corpus_data # list of strings
         self.wv = wv # dict from word to vector
 
-    def alignement(self, string_query):
+    def alignment(self, string_query):
         """
         query: string query
         ignore all query tokens not embedded in self.wv
@@ -18,12 +18,13 @@ class AIR:
         Return array of alignment scores for string_query where the index of the score
         cooresponds to the index of the doc from self.corpus_data
         """
-        all_query_tokens = set(word_tokenize(string_query)) #set of tokens
+        corpus = self.corpus_data
+        query_tokens = set(word_tokenize(string_query)) #set of tokens
         scores = []
         for doc in corpus: # calulate alignment score for all docs
             score = 0
             for word in query_tokens:
-                token = query_tokens(token, self.corpus_data, self.wv)
-                score += token.align()
+                token = Query_Token(word, self.corpus_data, self.wv)
+                score += token.align(doc)
             scores.append(score)
         return scores
