@@ -8,34 +8,24 @@ class AIR:
     This class will take a query string containing a question appended with an answer and perform
     the AIR algorithm described in the https://arxiv.org/abs/2005.01218 paper
     """
-    def __init__(self, es, topn, corpus_data, glove_emb):
-        self.es = es # elasticsearch client with one index named "corpus" with all the docs in it
-        self.topn = topn
+    def __init__(self, corpus_data, wv):
         self.corpus_data = corpus_data # list of strings
-        self.glove = glove
+        self.wv = wv # dict from word to vector
 
-    def air_retrieval(self, string_query):
+    def alignement(self, string_query):
         """
         query: string query
-        assume all query tokens are embedded with glove
+        ignore all query tokens not embedded in self.wv
 
-        Return set of all docs retrieved
+        Return array of alignment scores for string_query where the index of the score
+        cooresponds to the index of the doc from self.corpus_data
         """
-        hit_set = set()
-        full_coverage = False
-        previous_query = None
         all_query_tokens = set(word_tokenize(string_query)) #set of tokens
-        while(not self.full_coverage and self.previous_query!=self.query): # check stop condition for multi-hop iteration
-            es_query = Q('match', body=???)
-            search = Search(using=es, index="corpus").query(es_query)[:self.topn]
-            hits = search.execute()
-            hits = [hit.body for hit in hits]
+        scores = []
+        for doc in corpus: # calulate alignment score for all docs
+            score = 0
             for word in query_tokens:
-                token_idf = get_idf(word)
-                token = query_tokens(token, token_idf, hits, glove_emb)
-
-    def alignement():
-        """
-        
-        """
-        pass
+                token = query_tokens(token, self.corpus_data, self.wv)
+                score += token.align()
+            scores.append(score)
+        return scores

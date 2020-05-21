@@ -1,7 +1,5 @@
 """text search solver"""
 
-from elasticsearch import Elasticsearch, helpers
-from elasticsearch_dsl import Q, Search, MultiSearch
 import os
 from question import Question
 import random
@@ -11,26 +9,9 @@ import nltk
 from nltk import word_tokenize
 import jsonlines
 from air import AIR
-corpus_data = []
-with open("corpus.txt", 'r') as fp:
-    corpus_data.extend([each for each in fp.read().splitlines() if len(each)>0]) #get list of Knowledge base docs
-embeddings_index = {} #load glove embeddings
-f = open("glove.840B.300d.txt",'r', encoding='utf-8')
-for line in f:
-    values = line.split()
-    word = values[0]
-    # word=lmtzr.lemmatize(word)
-    try:
-       coefs = np.asarray(values[1:], dtype='float32')
-       b = np.linalg.norm(coefs, ord=2)
-       coefs=coefs/b
-       emb_size=coefs.shape[0]
-    except ValueError:
-       print (f"glove loading error: {values[0]}")
-       continue
-    embeddings_index[word] = coefs
+import numpy as np 
+import utils
 
-es = Elasticsearch() # load elasticsearch client
 class InformationRetrieval():
     """
     runs a query against elasticsearch and sums up the top `topn` scores. by default,
@@ -39,10 +20,9 @@ class InformationRetrieval():
     """
     def __init__(self, topn = 50, data_name="dev", output=False, tokenize=False):
         self.title = 0
-        self.tokenize=tokenize
-        self.fp = None
+        self.wv=utils.load_glove_emb() # dict word string to word vec
+        self.corpus = utils.load_corpus() # list of string docs
         self.topn = topn
-        self.fields = ["body"]
         self.question_filename = data_name+".jsonl"
         self.data_name = data_name
         self.output=output
@@ -51,7 +31,7 @@ class InformationRetrieval():
             self.jsonl_filename = "output_"+ tokenize_string +data_name+".jsonl"
             with open(self.jsonl_filename, "w"):
                 pass #empty file contents
-        self.processes = 8 if not output else 1
+        self.processes = 1
         self.questions = Question.read_jsonl(self.question_filename)
         # random.shuffle(self.questions)
         # self.questions = self.questions[:40]
@@ -71,13 +51,20 @@ class InformationRetrieval():
         contexts = [] # list of 4 lists, each containing hits of cooresponding option
         options = question.get_options()
         prompt = question.get_prompt()
-        
         option_score = {}
         # get search scores for each answer option
         for i in range(len(options)):
             option = options[i]
-            hits = self.search_option(prompt, option)
-            contexts.append([hit.body for hit in hits])
+            topn_corpus_indexes, score = self.search_option(prompt, option)
+            contexts.append(topn_corpus_indexes)
+            option_score[option] = score
+        # get answer with highest score
+        high_score = max(option_score.values())
+        search_answer = None
+        for option in option_score:
+            if option_score[option]==high_score:
+                search_answer = option
+        assert(not search_answer is None) # we now have the ir search_answer
         tmp['contexts'] = contexts
         tmp['options'] = options
         tmp['question'] = question.get_prompt()
@@ -86,6 +73,7 @@ class InformationRetrieval():
             with open(self.jsonl_filename, "a") as fp:
                 with jsonlines.Writer(fp) as writer:
                     writer.write(tmp)
+        return search_answer
 
     def search_option(self, prompt, option):
         search_string = prompt + " " +option
@@ -95,8 +83,12 @@ class InformationRetrieval():
             if word[1] in ["NN", "JJ","NNS","IN"]])
             option_mult = (" " + option)
             search_string = question_nouns + option_mult
-        info_retriver = AIR(es, self.topn,corpus_data,embeddings_index)
-        return info_retriver.air_retrieval(search_string)
+        
+        ir = AIR(self.corpus_data,self.wv)
+        alignment_scores = ir.alignment_scores(search_string)
+        topn_indexes = np.argpartition(a, - self.topn)[- self.topn:] # corpus indexes of topn scores
+        score = sum([alignment_scores[index] for index in topn_indexes])
+        return topn_indexes, score
 
     def load_question_results(self, responses):
         result = []
@@ -106,7 +98,7 @@ class InformationRetrieval():
                 yield result
                 result = []
 
-    def answer_all_questions(self,questions,i):
+    def answer_all_questions_in_partition(self,questions,i):
         correct_count = 0
         total = 0
         #Search all queries
@@ -116,16 +108,17 @@ class InformationRetrieval():
             total += 1
         return correct_count
 
-    def do_answer(self, i):
+    def do_answer_partition(self, i):
         length = len(self.questions)
         interval_length = length//self.processes
         start = interval_length*i 
         end = start+interval_length if i < self.processes-1 else length
-        return self.answer_all_questions(self.questions[start:end], i)
+        return self.answer_all_questions_in_partition(self.questions[start:end], i)
+
     def run(self):
         start = time.time()
         pool = Pool(processes=self.processes)
-        results = pool.map(self.do_answer, range(0, self.processes))
+        results = pool.map(self.do_answer_partition, range(0, self.processes))
         tokenize = " tokenize" if self.tokenize else ""
         print(f"{self.data_name + tokenize}; top: {self.topn}; Accuracy: {sum(results)/len(self.questions)}")
         print(time.time()-start)
@@ -138,11 +131,11 @@ if __name__ == "__main__":
     dev = True
     test = False
     output = True
-    tokenize=True
-    paragraph(30,data_name="dev",output=output, tokenize=tokenize)
-    paragraph(30,data_name="test", output=output, tokenize=tokenize)
-    paragraph(30,data_name="train", output=output, tokenize=tokenize)
+    # tokenize=True
+    # paragraph(30,data_name="dev",output=output, tokenize=tokenize)
+    # paragraph(30,data_name="test", output=output, tokenize=tokenize)
+    # paragraph(30,data_name="train", output=output, tokenize=tokenize)
     tokenize=False
     paragraph(30,data_name="dev",output=output, tokenize=tokenize)
-    paragraph(30,data_name="test", output=output, tokenize=tokenize)
-    paragraph(30,data_name="train", output=output, tokenize=tokenize)
+    # paragraph(30,data_name="test", output=output, tokenize=tokenize)
+    # paragraph(30,data_name="train", output=output, tokenize=tokenize)
