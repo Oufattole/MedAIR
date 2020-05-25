@@ -215,7 +215,7 @@ def get_doc_matrix(embedding, doc_id):
                 matrix = np.vstack(matrix, token_emb)
         except:
             pass
-    logging.info(f"cmat: {matrix}")
+    logging.info(f"cmat: {matrix.shape}")
     raise
     return matrix
 def score(encoder, hash_size, batch):
@@ -229,11 +229,11 @@ def score(encoder, hash_size, batch):
     return row, col, data
 
 
-def score_doc(encoder,hash_size, batches, doc_id):
+def score_doc(encoder,hash_size, batch, doc_id):
     row, col, data = [], [], []
     q_mat = None
     q_hashes = []
-    for token in batches:
+    for token in batch:
         try:
             embedded_token = np.array(encoder[token])
             q_hash.append(retriever.utils.hash(token, hash_size))
