@@ -210,7 +210,7 @@ def get_doc_matrix(embedding, doc_id):
     # logging.info(f"doc text: {text}")
     for token in tokens:
         try:
-            token_emb = np.array(embedding[token])
+            token_emb = np.array([embedding[token]])
         except:
             # logging.info(f"failed to encode: {token}")
             continue
@@ -236,7 +236,7 @@ def score_doc(encoder,hash_size, batch, doc_id):
     q_hashes = []
     for token in batch:
         try:
-            embedded_token = np.array(encoder[token])
+            embedded_token = np.array([encoder[token]])
         except:
             continue
         q_hashes.append(retriever.utils.hash(token, hash_size))
