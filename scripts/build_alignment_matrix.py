@@ -287,7 +287,7 @@ def get_similarity_matrix(args):
         Y axis = doc_id
         value = cosine similarity of word embedding
     """
-    logger.info(f"Number of docs: {len(PROCESS_DB.get_doc_ids()))
+    logger.info(f"Number of docs: {len(PROCESS_DB.get_doc_ids())}")
     logger.info(f'Loading embedding word vectors {args.embedding}')
     encoder = load_emb(args.embedding)
     
