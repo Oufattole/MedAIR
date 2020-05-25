@@ -204,7 +204,7 @@ def get_count_matrix(args, db, db_opts):
 # Transform count matrix to different forms.
 # ------------------------------------------------------------------------------
 def get_doc_matrix(embedding, doc_id):
-    tokens = PROCESS_TOK.tokenize(PROCESS_DB.get_doc_text(doc_id))
+    tokens = PROCESS_TOK.tokenize(PROCESS_DB.get_doc_text(doc_id)).words()
     matrix = None
     for token in tokens:
         try:
@@ -243,6 +243,7 @@ def score_doc(encoder,hash_size, batches, doc_id):
         else:
             q_mat = np.vstack(q_mat,embedded_token)
     c_mat = get_doc_matrix(encoder, doc_id)
+    logging.info(f"cmat: {c_mat.shape}; q_mat: {q_mat.shape}")
     cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
     assert(cosine_sim.size==len(q_hashes))
     return q_hashes, [doc_id]*len(q_hashes), cosine_sim
