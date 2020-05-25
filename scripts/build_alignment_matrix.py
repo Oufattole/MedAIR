@@ -180,7 +180,7 @@ def get_count_matrix(args, db, db_opts):
     # Compute the count matrix in steps (to keep in memory)
     logger.info('Mapping...')
     row, col, data = [], [], []
-    step = max(int(len(doc_ids) / 1000), 1)
+    step = max(int(len(doc_ids) / 10), 1)
     batches = [doc_ids[i:i + step] for i in range(0, len(doc_ids), step)]
     _count = partial(count, args.ngram, args.hash_size)
     for i, batch in enumerate(batches):
@@ -279,14 +279,24 @@ def get_similarity_matrix(args):
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
     row, col, data = [], [], []
-    step = max(int(len(question_tokens) / 200), 1)
+    step = max(int(len(question_tokens) / 1000), 1)
     _score = partial(score, encoder, args.hash_size)
     batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
     workers = ProcessPool(
         args.num_workers
     )
+    docid_to_mat = {}
+    count = 0
+    logger.info('Loading doc matrices')
+    for doc_id in doc_ids:
+        c_mat = get_doc_matrix(encoder, doc_id)
+        docid_to_mat[doc_id] = c_mat
+        if count % 100 == 0:
+            logger.info('-' * 25 + f'percent doc loaded{count/len(doc_ids)}' + '-' * 25)
+        count+= 1
+    raise("success")
     for i, batch in enumerate(batches):
-        logger.info('-' * 25 + 'Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
+        logger.info('-' * 25 + 'Question Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
         # for b_row, b_col, b_data in workers.imap_unordered(_score, batch):
         b_row, b_col, b_data = _score(batch) #tmp
         row.extend(b_row)
