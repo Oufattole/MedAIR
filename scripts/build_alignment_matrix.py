@@ -207,24 +207,17 @@ def get_doc_matrix(embedding, doc_id):
     text = PROCESS_DB.get_doc_text(doc_id)
     tokens = PROCESS_TOK.tokenize(text).words()
     matrix = None
-    print(text)
-    print()
-    print(tokens)
     for token in tokens:
         try:
             token_emb = np.array(embedding[token])
         except:
-            logging.info(f"failed to encode: {token}")
+            # logging.info(f"failed to encode: {token}")
             continue
         token_emb = token_emb/np.linalg.norm(token_emb)
         if matrix is None:
             matrix = token_emb
         else:
             matrix = np.vstack((matrix, token_emb))
-
-    logging.info(f"cmat: {matrix.shape}")
-    import pdb; pdb.set_trace()
-    raise
     return matrix
 def score(encoder, hash_size, batch):
     doc_ids = PROCESS_DB.get_doc_ids()
