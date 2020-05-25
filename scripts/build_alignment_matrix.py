@@ -215,6 +215,8 @@ def get_doc_matrix(embedding, doc_id):
                 matrix = np.vstack(matrix, token_emb)
         except:
             pass
+    logging.info(f"cmat: {matrix}")
+    raise
     return matrix
 def score(encoder, hash_size, batch):
     doc_ids = PROCESS_DB.get_doc_ids()
