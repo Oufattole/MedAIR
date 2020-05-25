@@ -220,7 +220,7 @@ def get_doc_matrix(embedding, doc_id):
         if matrix is None:
             matrix = token_emb
         else:
-            matrix = np.vstack(matrix, token_emb)
+            matrix = np.vstack((matrix, token_emb))
 
     logging.info(f"cmat: {matrix.shape}")
     import pdb; pdb.set_trace()
@@ -251,7 +251,7 @@ def score_doc(encoder,hash_size, batch, doc_id):
         if q_mat is None:
             q_mat = embedded_token
         else:
-            q_mat = np.vstack(q_mat,embedded_token)
+            q_mat = np.vstack((q_mat,embedded_token))
     c_mat = get_doc_matrix(encoder, doc_id)
     logging.info(f"cmat: {c_mat.shape}; q_mat: {q_mat.shape}")
     cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
