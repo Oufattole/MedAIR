@@ -180,7 +180,7 @@ def get_count_matrix(args, db, db_opts):
     # Compute the count matrix in steps (to keep in memory)
     logger.info('Mapping...')
     row, col, data = [], [], []
-    step = max(int(len(doc_ids) / 10), 1)
+    step = max(int(len(doc_ids) / 1000), 1)
     batches = [doc_ids[i:i + step] for i in range(0, len(doc_ids), step)]
     _count = partial(count, args.ngram, args.hash_size)
     for i, batch in enumerate(batches):
@@ -250,8 +250,8 @@ def score_doc(encoder,hash_size, batch, doc_id):
         row, col, data = [], [], []
         return row, col, data 
     else:
-        logging.info(f"cmat: {c_mat.shape}")
-        logging.info(f"q_mat: {q_mat.shape}")
+        # logging.info(f"cmat: {c_mat.shape}")
+        # logging.info(f"q_mat: {q_mat.shape}")
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
