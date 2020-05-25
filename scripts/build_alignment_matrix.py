@@ -72,13 +72,6 @@ def _tk(doc_id):
 # Build article --> word count sparse matrix.
 # ------------------------------------------------------------------------------
 
-def get_embedding(word):
-        try:
-            return embedding[word]
-        except:
-            print("embedding failed for word: " + word)
-            return None
-
 def load_emb(name):
     if name == "glove":
         return load_glove_emb()
@@ -255,7 +248,7 @@ def get_similarity_matrix(args):
     """
     logger.info(max(PROCESS_DB.get_doc_ids()))
     logger.info(f'Loading embedding word vectors {args.embedding}')
-    encoder = embedding(args.embedding)
+    encoder = load_emb(args.embedding)
     
     logger.info(f'Loading question tokens')
     question_tokens = list(get_question_tokens())
