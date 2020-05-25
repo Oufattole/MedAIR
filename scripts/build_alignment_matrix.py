@@ -287,7 +287,7 @@ def get_similarity_matrix(args):
         Y axis = doc_id
         value = cosine similarity of word embedding
     """
-    logger.info(max(PROCESS_DB.get_doc_ids()))
+    logger.info(f"Number of docs: {len(PROCESS_DB.get_doc_ids()))
     logger.info(f'Loading embedding word vectors {args.embedding}')
     encoder = load_emb(args.embedding)
     
@@ -310,7 +310,7 @@ def get_similarity_matrix(args):
     # )
     count = 0
     logger.info('Loading q_mat')
-    q_mat, q_hashes = generate_question_token_matrix(encoder, hash_size, question_tokens)
+    q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
     logger.info('Calculating similarity')
     for doc_id in doc_ids:
         c_mat = get_doc_matrix(encoder, doc_id)
