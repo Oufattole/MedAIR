@@ -246,7 +246,8 @@ def score_doc(encoder,hash_size, batch, doc_id):
         else:
             q_mat = np.vstack((q_mat,embedded_token))
     c_mat = get_doc_matrix(encoder, doc_id)
-    logging.info(f"cmat: {c_mat.shape}; q_mat: {q_mat.shape}")
+    logging.info(f"cmat: {c_mat.shape}")
+    logging.info(f"q_mat: {q_mat.shape}")
     cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
     assert(cosine_sim.size==len(q_hashes))
     return q_hashes, [doc_id]*len(q_hashes), cosine_sim
@@ -274,7 +275,7 @@ def get_similarity_matrix(args):
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
     row, col, data = [], [], []
-    step = 1#max(int(len(question_tokens) / 200), 1)
+    step = max(int(len(question_tokens) / 200), 1)
     _score = partial(score, encoder, args.hash_size)
     batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
     workers = ProcessPool(
