@@ -37,7 +37,7 @@ class Tokens(object):
         """Returns the original text (with whitespace reinserted)."""
         return ''.join([t[self.TEXT_WS] for t in self.data]).strip()
 
-    def words(self, uncased=False):
+    def words(self, uncased=True):
         """Returns a list of the text of each token
 
         Args:

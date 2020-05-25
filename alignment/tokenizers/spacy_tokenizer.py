@@ -11,6 +11,7 @@ Requires spaCy package and the spaCy english model.
 
 import spacy
 import copy
+import string
 from .tokenizer import Tokens, Tokenizer
 
 
@@ -35,6 +36,7 @@ class SpacyTokenizer(Tokenizer):
     def tokenize(self, text):
         # We don't treat new lines as tokens.
         clean_text = text.replace('\n', ' ')
+        clean_text = clean_text.translate(str.maketrans('', '', string.punctuation))
         tokens = self.nlp.tokenizer(clean_text)
         if any([p in self.annotators for p in ['lemma', 'pos', 'ner']]):
             self.nlp.tagger(tokens)
