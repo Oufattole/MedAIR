@@ -208,7 +208,7 @@ def get_doc_matrix(embedding, doc_id):
     matrix = None
     for token in tokens:
         try:
-            token_emb = embedding[token]/np.linalg.norm(embedding[token])
+            token_emb = np.array(embedding[token])/np.linalg.norm(embedding[token])
             if matrix is None:
                 matrix = token_emb
             else:
@@ -216,27 +216,36 @@ def get_doc_matrix(embedding, doc_id):
         except:
             pass
     return matrix
-def score(encoder, hash_size, data):
-    doc_id, batches = data
+def score(encoder, hash_size, batch):
+    doc_ids = PROCESS_DB.get_doc_ids()
+    row, col, data = [], [], []
+    for doc_id in doc_ids:
+        b_row, b_col, b_data = score_doc(encoder,hash_size, batch, doc_id)
+        row.extend(b_row)
+        col.extend(b_col)
+        data.extend(b_data)
+    return row, col, data
+
+
+def score_doc(encoder,hash_size, batches, doc_id)
     row, col, data = [], [], []
     q_mat = None
     q_hashes = []
     for token in batches:
         try:
-            embedded_token = encoder[token]
+            embedded_token = np.array(encoder[token])
             q_hash.append(retriever.utils.hash(token, hash_size))
         except:
             continue
         embedded_token = embedded_token/np.linalg.norm(embedded_token)
         if q_mat is None:
-            q_mat = encoder[token]
+            q_mat = embedded_token
         else:
-            q_mat = np.vstack(q_mat,encoder[token])
+            q_mat = np.vstack(q_mat,embedded_token)
     c_mat = get_doc_matrix(encoder, doc_id)
     cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
     assert(cosine_sim.size==len(q_hashes))
     return q_hashes, [doc_id]*len(q_hashes), cosine_sim
-
 
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
@@ -269,10 +278,12 @@ def get_similarity_matrix(args):
     )
     for i, batch in enumerate(batches):
         logger.info('-' * 25 + 'Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
-        for b_row, b_col, b_data in workers.imap_unordered(_score, (doc_id, batch)):
+        for b_row, b_col, b_data in workers.imap_unordered(_score, batch):
             row.extend(b_row)
             col.extend(b_col)
             data.extend(b_data)
+    workers.close()
+    workers.join()
 
     matrix = sp.csr_matrix(
         (data, (row, col)), shape=(args.hash_size, len(doc_ids))
@@ -318,7 +329,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
-    
+
     # logging.info('Counting words...')
     # count_matrix, doc_dict = get_count_matrix(
     #     args, 'sqlite', {'db_path': args.db_path}
