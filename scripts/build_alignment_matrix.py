@@ -234,12 +234,13 @@ def score_doc(encoder,hash_size, batch, doc_id):
     row, col, data = [], [], []
     q_mat = None
     q_hashes = []
+    logging.info(batch)
     for token in batch:
         try:
             embedded_token = np.array(encoder[token])
-            q_hash.append(retriever.utils.hash(token, hash_size))
         except:
             continue
+        q_hash.append(retriever.utils.hash(token, hash_size))
         embedded_token = embedded_token/np.linalg.norm(embedded_token)
         if q_mat is None:
             q_mat = embedded_token
