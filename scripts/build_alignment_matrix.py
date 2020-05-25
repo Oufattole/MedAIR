@@ -269,7 +269,7 @@ def score_doc(encoder,hash_size, batch, doc_id):
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
-def similarity(q_mat, c_mat, q_hashes):
+def similarity(q_mat, c_mat, q_hashes, doc_id):
     if c_mat is None:
         row, col, data = [], [], []
         return row, col, data 
@@ -309,12 +309,13 @@ def get_similarity_matrix(args):
     #     args.num_workers
     # )
     count = 0
-    logger.info('Loading q_mat')
+    logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
     q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
+    logger.info(f'q_mat has shape: {q_mat.shape}')
     logger.info('Calculating similarity')
     for doc_id in doc_ids:
         c_mat = get_doc_matrix(encoder, doc_id)
-        similarity(q_mat, c_mat, q_hashes)
+        similarity(q_mat, c_mat, q_hashes, doc_id)
         if count % 100 == 0:
             logger.info('-' * 25 + f'percent doc loaded{count/len(doc_ids)}' + '-' * 25)
         count+= 1
