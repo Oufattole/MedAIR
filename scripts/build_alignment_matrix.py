@@ -218,26 +218,26 @@ def get_doc_matrix(embedding, doc_id):
         except:
             pass
     return matrix
-    def score(encoder, hash_size, data):
-        doc_id, batches = data
-        row, col, data = [], [], []
-        q_mat = None
-        q_hashes = []
-        for token in batches:
-            try:
-                embedded_token = encoder[token]
-                q_hash.append(retriever.utils.hash(token, hash_size))
-            except:
-                continue
-            embedded_token = embedded_token/np.linalg.norm(embedded_token)
-            if q_mat is None:
-                q_mat = encoder[token]
-            else:
-                q_mat = np.vstack(q_mat,encoder[token])
-        c_mat = get_doc_matrix(encoder, doc_id)
-        cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
-        assert(cosine_sim.size==len(q_hashes))
-        return q_hashes, [doc_id]*len(q_hashes), cosine_sim
+def score(encoder, hash_size, data):
+    doc_id, batches = data
+    row, col, data = [], [], []
+    q_mat = None
+    q_hashes = []
+    for token in batches:
+        try:
+            embedded_token = encoder[token]
+            q_hash.append(retriever.utils.hash(token, hash_size))
+        except:
+            continue
+        embedded_token = embedded_token/np.linalg.norm(embedded_token)
+        if q_mat is None:
+            q_mat = encoder[token]
+        else:
+            q_mat = np.vstack(q_mat,encoder[token])
+    c_mat = get_doc_matrix(encoder, doc_id)
+    cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
+    assert(cosine_sim.size==len(q_hashes))
+    return q_hashes, [doc_id]*len(q_hashes), cosine_sim
 
 
 def get_similarity_matrix(args):
