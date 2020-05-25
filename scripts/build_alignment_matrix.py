@@ -230,7 +230,7 @@ def score(encoder, hash_size, batch):
         data.extend(b_data)
     return row, col, data
 
-def generate_question_token_matrix(encoder, hash_sizequestion_tokens):
+def generate_question_token_matrix(encoder, hash_size, question_tokens):
     q_mat = None
     q_hashes = []
     for token in question_tokens:
