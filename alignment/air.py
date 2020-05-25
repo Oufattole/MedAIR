@@ -19,11 +19,13 @@ class AIR:
         cooresponds to the index of the doc from self.corpus_data
         """
         corpus = self.corpus_data
-        query_tokens = set(word_tokenize(string_query)) #set of tokens
+        query_tokens = [word for word in word_tokenize(string_query) if word] #list of tokens
+        print(query_tokens)
         scores = []
         for doc in corpus: # calulate alignment score for all docs
             score = 0
             for word in query_tokens:
+                print('how fast')
                 token = Query_Token(word, self.corpus_data, self.wv)
                 score += token.align(doc)
             scores.append(score)

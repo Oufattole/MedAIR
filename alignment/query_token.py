@@ -17,16 +17,17 @@ def get_IDF(token, corpus):
         return -- IDF of token in corpus
         """
         doc_frequency = 0
-        token_in_doc = findWholeWord(token)
-        for doc in corpus:
-            try:
+        try:
+            token_in_doc = findWholeWord(token)
+            for doc in corpus:
                 if token_in_doc(doc):
                     doc_frequency+=1
-            except:
-                print('fail')
-        total_doc = len(corpus)
-        idf = math.log10((total_doc - doc_frequency + 0.5) / float(doc_frequency + 0.5))
-        return idf
+            total_doc = len(corpus)
+            idf = math.log10((total_doc - doc_frequency + 0.5) / float(doc_frequency + 0.5))
+            return idf
+        except:
+            print('idf fail: ' + token)
+            return 0
 
 class Query_Token:
     def __init__(self, token, corpus, wv):
@@ -36,7 +37,7 @@ class Query_Token:
         hits: list of hits, used to calculate cosine similarity
         """
         self.token = token
-        self.idf = get_IDF(token, corpus)
+        self.idf = 1 #get_IDF(token, corpus)
         self.covered = False
         self.wv = wv
 
@@ -46,7 +47,7 @@ class Query_Token:
         """
         token = self.token
         #we ignore tokens not in glove
-        hit_vecs = [self.wv[hit_token[0]] for hit_token in word_tokenize(hit) if hit_token[0] in self.wv]
+        hit_vecs = [self.wv[hit_token] for hit_token in word_tokenize(hit) if hit_token in self.wv]
         token_vec = self.wv[token] if token in self.wv else 0
         if len(hit_vecs) and token_vec() != None:
             return max([cosine_similarity(token_vec, hit_vec) for hit_vec in hit_vecs]) * self.idf
