@@ -270,7 +270,7 @@ def get_similarity_matrix(args):
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
     row, col, data = [], [], []
-    step = max(int(len(question_tokens) / 1000), 1)
+    step = max(int(len(question_tokens) / 200), 1)
     _score = partial(score, encoder, args.hash_size)
     batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
     workers = ProcessPool(
