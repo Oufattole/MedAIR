@@ -230,7 +230,21 @@ def score(encoder, hash_size, batch):
         data.extend(b_data)
     return row, col, data
 
-
+def generate_question_token_matrix(encoder, hash_sizequestion_tokens):
+    q_mat = None
+    q_hashes = []
+    for token in question_tokens:
+        try:
+            embedded_token = np.array([encoder[token]])
+        except:
+            continue
+        q_hashes.append(retriever.utils.hash(token, hash_size))
+        embedded_token = embedded_token/np.linalg.norm(embedded_token)
+        if q_mat is None:
+            q_mat = embedded_token
+        else:
+            q_mat = np.vstack((q_mat,embedded_token))
+        return q_mat, q_hashes
 def score_doc(encoder,hash_size, batch, doc_id):
     q_mat = None
     q_hashes = []
@@ -255,7 +269,16 @@ def score_doc(encoder,hash_size, batch, doc_id):
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
-
+def similarity(q_mat, c_mat, q_hashes):
+    if c_mat is None:
+        row, col, data = [], [], []
+        return row, col, data 
+    else:
+        # logging.info(f"cmat: {c_mat.shape}")
+        # logging.info(f"q_mat: {q_mat.shape}")
+        cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
+        assert(cosine_sim.size==len(q_hashes))
+        return q_hashes, [doc_id]*len(q_hashes), cosine_sim
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
 
@@ -279,18 +302,19 @@ def get_similarity_matrix(args):
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
     row, col, data = [], [], []
-    step = max(int(len(question_tokens) / 1000), 1)
-    _score = partial(score, encoder, args.hash_size)
-    batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
-    workers = ProcessPool(
-        args.num_workers
-    )
-    docid_to_mat = {}
+    # step = max(int(len(question_tokens) / 1000), 1)
+    # _score = partial(score, encoder, args.hash_size)
+    # batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
+    # workers = ProcessPool(
+    #     args.num_workers
+    # )
     count = 0
-    logger.info('Loading doc matrices')
+    logger.info('Loading q_mat')
+    q_mat, q_hashes = generate_question_token_matrix(encoder, hash_size, question_tokens)
+    logger.info('Calculating similarity')
     for doc_id in doc_ids:
         c_mat = get_doc_matrix(encoder, doc_id)
-        docid_to_mat[doc_id] = c_mat
+        similarity(q_mat, c_mat, q_hashes)
         if count % 100 == 0:
             logger.info('-' * 25 + f'percent doc loaded{count/len(doc_ids)}' + '-' * 25)
         count+= 1
