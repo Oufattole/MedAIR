@@ -17,6 +17,8 @@ from multiprocessing import Pool as ProcessPool
 from multiprocessing.util import Finalize
 from functools import partial
 from collections import Counter
+from gensim.models.wrappers import FastText
+from gensim.models import KeyedVectors
 
 from alignment import retriever
 from alignment import tokenizers
@@ -85,20 +87,20 @@ def load_emb(name):
         raise RuntimeError("Embedding type not found")
 
 def load_glove_emb():
-    df = pd.read_csv('glove.840B.300d.txt', sep=" ", quoting=3, header=None, index_col=0)
+    df = pd.read_csv(DATA_DIR+'/embeddings/glove.840B.300d.txt', sep=" ", quoting=3, header=None, index_col=0)
     glove = {key: val.values for key, val in df.T.items()}
     return glove
 
 def load_biowv():
-    wv_from_bin = FastText.load_fasttext_format(DATA_DIR+"/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True)  # C bin format
     return wv_from_bin
 
 def load_bio_wiki():
-    wv_from_bin = KeyedVectors.load_word2vec_format("inserftfilename.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format("/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True)  # C bin format
     return wv_from_bin
 
 def load_bio():
-    wv_from_bin = KeyedVectors.load_word2vec_format("inserftfilename.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format("/embeddings/PubMed-and-PMC-w2v.bin", binary=True)  # C bin format
     return wv_from_bin
 
 def get_question_tokens():
@@ -313,10 +315,10 @@ if __name__ == '__main__':
     parser.add_argument('--num-workers', type=int, default=8,
                         help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
-    logging.info('Counting words...')
-    count_matrix, doc_dict = get_count_matrix(
-        args, 'sqlite', {'db_path': args.db_path}
-    )
+    # logging.info('Counting words...')
+    # count_matrix, doc_dict = get_count_matrix(
+    #     args, 'sqlite', {'db_path': args.db_path}
+    # )
 
     logger.info('Making alignment vectors...')
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
