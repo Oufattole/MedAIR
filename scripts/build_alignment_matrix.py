@@ -314,7 +314,9 @@ def get_similarity_matrix(args):
     _similarity = partial(similarity, q_mat, q_hashes, encoder)
     count = 0
     with tqdm(total=len(doc_ids)) as pbar:
-        for b_row, b_col, b_data in tqdm(workers.imap_unordered(_similarity, doc_ids)):
+        # for b_row, b_col, b_data in tqdm(workers.imap_unordered(_similarity, doc_ids)):
+        for doc_id in tqdm(doc_ids):
+            b_row, b_col, b_data = _similarity(doc_id)
             count += 1
             row.extend(b_row)
             col.extend(b_col)
