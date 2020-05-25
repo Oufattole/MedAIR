@@ -244,7 +244,7 @@ def generate_question_token_matrix(encoder, hash_size, question_tokens):
             q_mat = embedded_token
         else:
             q_mat = np.vstack((q_mat,embedded_token))
-        return q_mat, q_hashes
+    return q_mat, q_hashes
 def score_doc(encoder,hash_size, batch, doc_id):
     q_mat = None
     q_hashes = []
