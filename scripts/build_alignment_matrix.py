@@ -212,13 +212,16 @@ def get_doc_matrix(embedding, doc_id):
     print(tokens)
     for token in tokens:
         try:
-            token_emb = np.array(embedding[token])/np.linalg.norm(embedding[token])
-            if matrix is None:
-                matrix = token_emb
-            else:
-                matrix = np.vstack(matrix, token_emb)
+            token_emb = np.array(embedding[token])
         except:
             logging.info(f"failed to encode: {token}")
+            continue
+        token_emb = token_emb/np.linalg.norm(token_emb)
+        if matrix is None:
+            matrix = token_emb
+        else:
+            matrix = np.vstack(matrix, token_emb)
+
     logging.info(f"cmat: {matrix.shape}")
     import pdb; pdb.set_trace()
     raise
