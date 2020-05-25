@@ -15,6 +15,7 @@ import logging
 
 from multiprocessing import Pool as ProcessPool
 from multiprocessing.util import Finalize
+from tqdm import tqdm
 from functools import partial
 from collections import Counter
 from gensim.models.wrappers import FastText
