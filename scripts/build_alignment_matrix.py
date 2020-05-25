@@ -227,7 +227,7 @@ def score(encoder, hash_size, batch):
     return row, col, data
 
 
-def score_doc(encoder,hash_size, batches, doc_id)
+def score_doc(encoder,hash_size, batches, doc_id):
     row, col, data = [], [], []
     q_mat = None
     q_hashes = []
