@@ -85,9 +85,9 @@ def store_contents(data_path, save_path, num_workers=None):
     """
     data_path = DATA_DIR + data_path
     save_path = DATA_DIR + save_path
-    os.remove(save_path)
     if os.path.isfile(save_path):
-        raise RuntimeError('%s already exists! Not overwriting.' % save_path)
+        os.remove(save_path)
+        #raise RuntimeError('%s already exists! Not overwriting.' % save_path)
 
     logger.info('Reading into database...')
     conn = sqlite3.connect(save_path)
