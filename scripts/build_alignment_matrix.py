@@ -75,11 +75,11 @@ def _tk(doc_id):
 def load_emb(name):
     if name == "glove":
         return load_glove_emb()
-    elif name == "biowv":
-        return load_biowv
-    elif name == "bio_wiki":
+    elif name == "bio-wv":
         return load_biowv()
-    elif name == "bio":
+    elif name == "wiki-pubmed-pmc-wv":
+        return load_bio_wiki()
+    elif name == "pubmed-pmc-wv":
         return load_bio()
     else:
         raise RuntimeError("Embedding type not found")
