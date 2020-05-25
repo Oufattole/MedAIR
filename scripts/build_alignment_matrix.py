@@ -232,7 +232,6 @@ def score(encoder, hash_size, batch):
 
 
 def score_doc(encoder,hash_size, batch, doc_id):
-    row, col, data = [], [], []
     q_mat = None
     q_hashes = []
     for token in batch:
@@ -248,7 +247,8 @@ def score_doc(encoder,hash_size, batch, doc_id):
             q_mat = np.vstack((q_mat,embedded_token))
     c_mat = get_doc_matrix(encoder, doc_id)
     if c_mat is None:
-        pass 
+        row, col, data = [], [], []
+        return row, col, data 
     else:
         logging.info(f"cmat: {c_mat.shape}")
         logging.info(f"q_mat: {q_mat.shape}")
