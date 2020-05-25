@@ -231,7 +231,7 @@ def score(encoder, hash_size, batch):
     return row, col, data
 
 def generate_question_token_matrix(encoder, hash_size, question_tokens):
-    q_mat = None
+    q_mat = []
     q_hashes = []
     for token in question_tokens:
         try:
@@ -240,11 +240,8 @@ def generate_question_token_matrix(encoder, hash_size, question_tokens):
             continue
         q_hashes.append(retriever.utils.hash(token, hash_size))
         embedded_token = embedded_token/np.linalg.norm(embedded_token)
-        if q_mat is None:
-            q_mat = embedded_token
-        else:
-            q_mat = np.vstack((q_mat,embedded_token))
-    return q_mat, q_hashes
+        q_mat.append(embedded_token)
+    return np.array(q_mat), q_hashes
 def score_doc(encoder,hash_size, batch, doc_id):
     q_mat = None
     q_hashes = []
@@ -269,7 +266,8 @@ def score_doc(encoder,hash_size, batch, doc_id):
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
-def similarity(q_mat, c_mat, q_hashes, doc_id):
+def similarity(q_mat, q_hashes, encoder, doc_id):
+    c_mat = get_doc_matrix(encoder, doc_id)
     if c_mat is None:
         row, col, data = [], [], []
         return row, col, data 
@@ -305,30 +303,28 @@ def get_similarity_matrix(args):
     # step = max(int(len(question_tokens) / 1000), 1)
     # _score = partial(score, encoder, args.hash_size)
     # batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
-    # workers = ProcessPool(
-    #     args.num_workers
-    # )
-    count = 0
+    workers = ProcessPool(
+        args.num_workers
+    )
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
     q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
     logger.info(f'q_mat has shape: {q_mat.shape}')
     logger.info('Calculating similarity')
-    for doc_id in doc_ids:
-        c_mat = get_doc_matrix(encoder, doc_id)
-        similarity(q_mat, c_mat, q_hashes, doc_id)
-        if count % 100 == 0:
-            logger.info('-' * 25 + f'percent doc loaded{count/len(doc_ids)}' + '-' * 25)
-        count+= 1
-    raise("success")
-    for i, batch in enumerate(batches):
-        logger.info('-' * 25 + 'Question Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
-        # for b_row, b_col, b_data in workers.imap_unordered(_score, batch):
-        b_row, b_col, b_data = _score(batch) #tmp
+    _similarity = partial(similarity, q_mat, q_hashes, encoder)
+    count = 0
+    with tqdm(total=len(doc_ids)) as pbar:
+        for b_row, b_col, b_data in tqdm(workers.imap_unordered(_similarity, doc_ids)):
+            count += 1
+            row.extend(b_row)
+            col.extend(b_col)
+            data.extend(b_data)
+            pbar.update()
+    for b_row, b_col, b_data in workers.imap_unordered(_similarity, doc_ids):
         row.extend(b_row)
         col.extend(b_col)
         data.extend(b_data)
-    # workers.close()
-    # workers.join()
+    logger.info('Read %d docs.' % count)
+    logger.info('Storing')
 
     matrix = sp.csr_matrix(
         (data, (row, col)), shape=(args.hash_size, len(doc_ids))
