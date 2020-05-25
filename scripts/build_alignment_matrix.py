@@ -174,9 +174,7 @@ def get_count_matrix(args, db, db_opts):
     # Setup worker pool
     tok_class = tokenizers.get_class(args.tokenizer)
     workers = ProcessPool(
-        args.num_workers,
-        initializer=init,
-        initargs=(tok_class, db_class, db_opts)
+        args.num_workers
     )
 
     # Compute the count matrix in steps (to keep in memory)
@@ -263,9 +261,12 @@ def get_similarity_matrix(args):
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
     row, col, data = [], [], []
-    step = max(int(len(question_tokens) / 100), 1)
+    step = max(int(len(question_tokens) / 1000), 1)
     _score = partial(score, encoder, args.hash_size)
     batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
+    workers = ProcessPool(
+        args.num_workers
+    )
     for i, batch in enumerate(batches):
         logger.info('-' * 25 + 'Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
         for b_row, b_col, b_data in workers.imap_unordered(_score, (doc_id, batch)):
@@ -315,13 +316,16 @@ if __name__ == '__main__':
     parser.add_argument('--num-workers', type=int, default=8,
                         help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
+
+    init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
+    
     # logging.info('Counting words...')
     # count_matrix, doc_dict = get_count_matrix(
     #     args, 'sqlite', {'db_path': args.db_path}
     # )
 
     logger.info('Making alignment vectors...')
-    init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
+    
     alignment = get_similarity_matrix(args)
 
     logger.info('Getting word-doc frequencies...')
