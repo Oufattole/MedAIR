@@ -319,13 +319,10 @@ def get_similarity_matrix(args):
             col.extend(b_col)
             data.extend(b_data)
             pbar.update()
-    for b_row, b_col, b_data in workers.imap_unordered(_similarity, doc_ids):
-        row.extend(b_row)
-        col.extend(b_col)
-        data.extend(b_data)
     logger.info('Read %d docs.' % count)
     logger.info('Storing')
-
+    assert(len(data) == len(row))
+    assert(len(row) == len(col))
     matrix = sp.csr_matrix(
         (data, (row, col)), shape=(args.hash_size, len(doc_ids))
     )
