@@ -204,8 +204,12 @@ def get_count_matrix(args, db, db_opts):
 # Transform count matrix to different forms.
 # ------------------------------------------------------------------------------
 def get_doc_matrix(embedding, doc_id):
-    tokens = PROCESS_TOK.tokenize(PROCESS_DB.get_doc_text(doc_id)).words()
+    text = PROCESS_DB.get_doc_text(doc_id)
+    tokens = PROCESS_TOK.tokenize(text).words()
     matrix = None
+    print(text)
+    print()
+    print(tokens.words())
     for token in tokens:
         try:
             token_emb = np.array(embedding[token])/np.linalg.norm(embedding[token])
