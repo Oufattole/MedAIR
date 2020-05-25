@@ -207,6 +207,7 @@ def get_doc_matrix(embedding, doc_id):
     text = PROCESS_DB.get_doc_text(doc_id)
     tokens = PROCESS_TOK.tokenize(text).words()
     matrix = None
+    logging.info(f"doc text: {text}")
     for token in tokens:
         try:
             token_emb = np.array(embedding[token])
@@ -240,7 +241,7 @@ def score_doc(encoder,hash_size, batch, doc_id):
             embedded_token = np.array(encoder[token])
         except:
             continue
-        q_hash.append(retriever.utils.hash(token, hash_size))
+        q_hashes.append(retriever.utils.hash(token, hash_size))
         embedded_token = embedded_token/np.linalg.norm(embedded_token)
         if q_mat is None:
             q_mat = embedded_token
