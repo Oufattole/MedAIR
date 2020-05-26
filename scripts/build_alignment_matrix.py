@@ -305,9 +305,6 @@ def get_similarity_matrix(args):
     # step = max(int(len(question_tokens) / 1000), 1)
     # _score = partial(score, encoder, args.hash_size)
     # batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
-    workers = ProcessPool(
-        args.num_workers
-    )
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
     q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
     logger.info(f'q_mat has shape: {q_mat.shape}')
@@ -315,14 +312,13 @@ def get_similarity_matrix(args):
     _similarity = partial(similarity, q_mat, q_hashes, encoder)
     count = 0
     # with tqdm(total=len(doc_ids)) as pbar:
-    for b_row, b_col, b_data in tqdm(workers.imap_unordered(_similarity, doc_ids), total=len(doc_ids)): # for doc_id in tqdm(doc_ids):
-        # b_row, b_col, b_data = _similarity(doc_id)
-        count += 1
+    with ProcessPool(args.num_workers) as workers:
+        results = tqdm(workers.map(_similarity, doc_ids), total=len(doc_ids)) # for doc_id in tqdm(doc_ids):
+    assert(len(results) == len(doc_ids))
+    for b_row, b_col, b_data in results:
         row.extend(b_row)
         col.extend(b_col)
         data.extend(b_data)
-    workers.close()
-    workers.join()
     logger.info('Read %d docs.' % count)
     logger.info('Storing')
     assert(len(data) == len(row))
@@ -330,6 +326,7 @@ def get_similarity_matrix(args):
     matrix = sp.csr_matrix(
         (data, (row, col)), shape=(args.hash_size, len(doc_ids))
     )
+    logger.info('Success!')
     return matrix
 
 
