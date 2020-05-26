@@ -298,16 +298,10 @@ def get_similarity_matrix(args):
     question_tokens = list(get_question_tokens())
     logger.info(f"number of question tokens loaded: {len(question_tokens)}")
 
-    # logger.info(f'Loading corpus tokens')
-    # corpus_tokens = get_corpus_tokens(args)
-    # logger.info(f"number of corpus tokens: {len(corpus_tokens)}")
-    # cosine_sim_data, q_token_hash_row, c_token_hash_col = [], [], []
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
-    row, col, data = [], [], []
-    # step = max(int(len(question_tokens) / 1000), 1)
-    # _score = partial(score, encoder, args.hash_size)
-    # batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
+
+    
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
     global q_mat
     global q_hashes
@@ -317,15 +311,19 @@ def get_similarity_matrix(args):
     count = 0
     # with tqdm(total=len(doc_ids)) as pbar:
     tok_class, db_class, db_opts = tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}
+    results = []
     with ProcessPool(args.num_workers, initializer=init, initargs=(tok_class, db_class, db_opts)) as workers:
         for doc_id, cosine_sim in tqdm(workers.imap_unordered(similarity, doc_ids), total=len(doc_ids)):
             if (not doc_id is None) and (not cosine_sim is None):
-                b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
-                assert(len(b_row) == len(b_data))
-                row.extend(b_row)
-                col.extend(b_col)
-                data.extend(b_data)
-    logger.info('Read %d docs.' % count)
+                results.append((doc_id, cosine_sim))
+    logger.info("Making sparse matrix entries")
+    row, col, data = [], [], []
+    for doc_id, cosine_sim in results:
+        b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
+        assert(len(b_row) == len(b_data))
+        row.extend(b_row)
+        col.extend(b_col)
+        data.extend(b_data)
     logger.info('Storing')
     assert(len(data) == len(row))
     assert(len(row) == len(col))
