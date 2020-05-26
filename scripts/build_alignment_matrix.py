@@ -372,10 +372,10 @@ if __name__ == '__main__':
 
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
 
-    # logging.info('Counting words...')
-    # count_matrix, doc_dict = get_count_matrix(
-    #     args, 'sqlite', {'db_path': args.db_path}
-    # )
+    logging.info('Counting words...')
+    count_matrix, doc_dict = get_count_matrix(
+        args, 'sqlite', {'db_path': args.db_path}
+    )
 
     logger.info('Making alignment vectors...')
     
