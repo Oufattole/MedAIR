@@ -372,7 +372,7 @@ if __name__ == '__main__':
                         help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
 
-    # init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
+    init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
 
     logging.info('Counting words...')
     count_matrix, doc_dict = get_count_matrix(
