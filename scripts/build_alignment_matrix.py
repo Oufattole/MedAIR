@@ -276,6 +276,7 @@ def similarity(q_mat, q_hashes, encoder, doc_id):
         # logging.info(f"cmat: {c_mat.shape}")
         # logging.info(f"q_mat: {q_mat.shape}")
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
+        assert(len(q_hashes)==q_mat.shape[0])
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
 def get_similarity_matrix(args):
