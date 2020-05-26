@@ -236,7 +236,7 @@ def generate_question_token_matrix(encoder, hash_size, question_tokens):
     q_hashes = []
     for token in question_tokens:
         try:
-            embedded_token = np.array([encoder[token]])
+            embedded_token = np.array(encoder[token])
         except:
             continue
         q_hashes.append(retriever.utils.hash(token, hash_size))
