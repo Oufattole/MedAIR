@@ -41,6 +41,13 @@ def load_sparse_csr(filename):
                             loader['indptr']), shape=loader['shape'])
     return matrix, loader['metadata'].item(0) if 'metadata' in loader else None
 
+def save_word_freq(filename, freqs, metadata):
+    data = {
+        'word_freq' : freqs,
+        'metadata': metadata,
+    }
+    np.savez(filename, **data)
+
 
 # ------------------------------------------------------------------------------
 # Token hashing.
