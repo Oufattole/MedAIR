@@ -316,7 +316,8 @@ def get_similarity_matrix(args):
     logger.info('Calculating similarity')
     count = 0
     # with tqdm(total=len(doc_ids)) as pbar:
-    with ProcessPool(args.num_workers) as workers:
+    tok_class, db_class, db_opts = tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}
+    with ProcessPool(args.num_workers, initializer=init, initargs=(tok_class, db_class, db_opts)) as workers:
         for doc_id, cosine_sim in tqdm(workers.imap_unordered(similarity, doc_ids), total=len(doc_ids)):
             if (not doc_id is None) and (not cosine_sim is None):
                 b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
