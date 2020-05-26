@@ -20,6 +20,7 @@ from functools import partial
 from collections import Counter
 from gensim.models.wrappers import FastText
 from gensim.models import KeyedVectors
+import threading
 
 from alignment import retriever
 from alignment import tokenizers
@@ -33,12 +34,13 @@ fmt = logging.Formatter('%(asctime)s: [ %(message)s ]', '%m/%d/%Y %I:%M:%S %p')
 console = logging.StreamHandler()
 console.setFormatter(fmt)
 logger.addHandler(console)
+lock = threading.Lock()
 
 
 # ------------------------------------------------------------------------------
 # Multiprocessing functions
 # ------------------------------------------------------------------------------
-
+row, col, data = [], [], []
 DOC2IDX = None
 PROCESS_TOK = None
 PROCESS_DB = None
@@ -267,18 +269,26 @@ def score_doc(encoder,hash_size, batch, doc_id):
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
+def add_matrix_data(doc_id, cosine_sim, q_hashes):
+    with lock:
+        global row, col, data
+        b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
+        assert(len(b_row) == len(b_data))
+        row.extend(b_row)
+        col.extend(b_col)
+        data.extend(b_data)
+
 def similarity(q_mat, q_hashes, encoder, doc_id):
     c_mat = get_doc_matrix(encoder, doc_id)
     if c_mat is None:
-        row, col, data = [], [], []
-        return row, col, data 
+        pass
     else:
         # logging.info(f"cmat: {c_mat.shape}")
         # logging.info(f"q_mat: {q_mat.shape}")
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(len(q_hashes)==q_mat.shape[0])
         assert(cosine_sim.size==len(q_hashes))
-        return doc_id, cosine_sim
+        add_matrix_data(doc_id, cosine_sim)
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
 
@@ -301,7 +311,6 @@ def get_similarity_matrix(args):
     # cosine_sim_data, q_token_hash_row, c_token_hash_col = [], [], []
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
-    row, col, data = [], [], []
     # step = max(int(len(question_tokens) / 1000), 1)
     # _score = partial(score, encoder, args.hash_size)
     # batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
@@ -313,14 +322,11 @@ def get_similarity_matrix(args):
     count = 0
     # with tqdm(total=len(doc_ids)) as pbar:
     with ProcessPool(args.num_workers) as workers:
-        for doc_id, cosine_sim in tqdm(workers.imap_unordered(_similarity, doc_ids), total=len(doc_ids)):
-            b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
-            assert(len(b_row) == len(b_data))
-            row.extend(b_row)
-            col.extend(b_col)
-            data.extend(b_data)
+        for _ in tqdm(workers.imap_unordered(_similarity, doc_ids), total=len(doc_ids)):
+            pass
     logger.info('Read %d docs.' % count)
     logger.info('Storing')
+    global row, col, data
     assert(len(data) == len(row))
     assert(len(row) == len(col))
     matrix = sp.csr_matrix(
