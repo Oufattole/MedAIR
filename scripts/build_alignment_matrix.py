@@ -273,8 +273,7 @@ def similarity(doc_id):
     global q_mat, q_hashes, encoder
     c_mat = get_doc_matrix(encoder, doc_id)
     if c_mat is None:
-        row, col, data = [], [], []
-        return row, col, data 
+        return None, None
     else:
         # logging.info(f"cmat: {c_mat.shape}")
         # logging.info(f"q_mat: {q_mat.shape}")
@@ -319,11 +318,12 @@ def get_similarity_matrix(args):
     # with tqdm(total=len(doc_ids)) as pbar:
     with ProcessPool(args.num_workers) as workers:
         for doc_id, cosine_sim in tqdm(workers.imap_unordered(similarity, doc_ids), total=len(doc_ids)):
-            b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
-            assert(len(b_row) == len(b_data))
-            row.extend(b_row)
-            col.extend(b_col)
-            data.extend(b_data)
+            if (not doc_id is None) and (not cosine_sim is None):
+                b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
+                assert(len(b_row) == len(b_data))
+                row.extend(b_row)
+                col.extend(b_col)
+                data.extend(b_data)
     logger.info('Read %d docs.' % count)
     logger.info('Storing')
     assert(len(data) == len(row))
