@@ -38,9 +38,6 @@ logger.addHandler(console)
 # ------------------------------------------------------------------------------
 # Multiprocessing functions
 # ------------------------------------------------------------------------------
-q_hashes = None
-q_mat = None
-encoder = None
 DOC2IDX = None
 PROCESS_TOK = None
 PROCESS_DB = None
@@ -140,71 +137,6 @@ def get_corpus_tokens(args):
 # p tokens: 281835
 
 
-def count(ngram, hash_size, doc_id):
-    """Fetch the text of a document and compute hashed ngrams counts."""
-    global DOC2IDX
-    row, col, data = [], [], []
-    # Tokenize    
-    tokens = tokenize(retriever.utils.normalize(fetch_text(doc_id)))
-
-    # Get ngrams from tokens, with stopword/punctuation filtering.
-    ngrams = tokens.ngrams(
-        n=ngram, uncased=True, filter_fn=retriever.utils.filter_ngram
-    )
-
-    # Hash ngrams and count occurences
-    counts = Counter([retriever.utils.hash(gram, hash_size) for gram in ngrams])
-
-    # Return in sparse matrix data format.
-    row.extend(counts.keys())
-    col.extend([DOC2IDX[doc_id]] * len(counts))
-    data.extend(counts.values())
-    return row, col, data
-
-
-def get_count_matrix(args, db, db_opts):
-    """Form a sparse word to document count matrix (inverted index).
-
-    M[i, j] = # times word i appears in document j.
-    """
-    # Map doc_ids to indexes
-    global DOC2IDX
-    db_class = retriever.get_class(db)
-    with db_class(**db_opts) as doc_db:
-        doc_ids = doc_db.get_doc_ids()
-    DOC2IDX = {doc_id: i for i, doc_id in enumerate(doc_ids)}
-
-    # Setup worker pool
-    tok_class = tokenizers.get_class(args.tokenizer)
-    workers = ProcessPool(
-        args.num_workers,
-        initializer=init,
-        initargs=(tok_class, db_class, db_opts)
-    )
-
-    # Compute the count matrix in steps (to keep in memory)
-    logger.info('Mapping...')
-    row, col, data = [], [], []
-    step = max(int(len(doc_ids) / 10), 1)
-    batches = [doc_ids[i:i + step] for i in range(0, len(doc_ids), step)]
-    _count = partial(count, args.ngram, args.hash_size)
-    for i, batch in enumerate(batches):
-        logger.info('-' * 25 + 'Batch %d/%d' % (i + 1, len(batches)) + '-' * 25)
-        for b_row, b_col, b_data in workers.imap_unordered(_count, batch):
-            row.extend(b_row)
-            col.extend(b_col)
-            data.extend(b_data)
-    workers.close()
-    workers.join()
-
-    logger.info('Creating sparse matrix...')
-    count_matrix = sp.csr_matrix(
-        (data, (row, col)), shape=(args.hash_size, len(doc_ids))
-    )
-    count_matrix.sum_duplicates()
-    return count_matrix, (DOC2IDX, doc_ids)
-
-
 # ------------------------------------------------------------------------------
 # Transform count matrix to different forms.
 # ------------------------------------------------------------------------------
@@ -225,15 +157,6 @@ def get_doc_matrix(embedding, doc_id):
         else:
             matrix = np.vstack((matrix, token_emb))
     return matrix
-def score(encoder, hash_size, batch):
-    doc_ids = PROCESS_DB.get_doc_ids()
-    row, col, data = [], [], []
-    for doc_id in doc_ids:
-        b_row, b_col, b_data = score_doc(encoder,hash_size, batch, doc_id)
-        row.extend(b_row)
-        col.extend(b_col)
-        data.extend(b_data)
-    return row, col, data
 
 def generate_question_token_matrix(encoder, hash_size, question_tokens):
     q_mat = []
@@ -247,30 +170,6 @@ def generate_question_token_matrix(encoder, hash_size, question_tokens):
         embedded_token = embedded_token/np.linalg.norm(embedded_token)
         q_mat.append(embedded_token)
     return np.array(q_mat), q_hashes
-def score_doc(encoder,hash_size, batch, doc_id):
-    q_mat = None
-    q_hashes = []
-    for token in batch:
-        try:
-            embedded_token = np.array([encoder[token]])
-        except:
-            continue
-        q_hashes.append(retriever.utils.hash(token, hash_size))
-        embedded_token = embedded_token/np.linalg.norm(embedded_token)
-        if q_mat is None:
-            q_mat = embedded_token
-        else:
-            q_mat = np.vstack((q_mat,embedded_token))
-    c_mat = get_doc_matrix(encoder, doc_id)
-    if c_mat is None:
-        row, col, data = [], [], []
-        return row, col, data 
-    else:
-        # logging.info(f"cmat: {c_mat.shape}")
-        # logging.info(f"q_mat: {q_mat.shape}")
-        cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
-        assert(cosine_sim.size==len(q_hashes))
-        return q_hashes, [doc_id]*len(q_hashes), cosine_sim
 def similarity(q_mat,q_hashes, encoder, doc_id):
     # global q_mat, q_hashes, encoder
     c_mat = get_doc_matrix(encoder, doc_id)
@@ -291,9 +190,8 @@ def get_similarity_matrix(args):
         Y axis = doc_id
         value = cosine similarity of word embedding
     """
-    logger.info(f"Number of docs: {len(PROCESS_DB.get_doc_ids())}")
+    
     logger.info(f'Loading embedding word vectors {args.embedding}')
-    # global encoder
     encoder = load_emb(args.embedding)
     
     logger.info(f'Loading question tokens')
@@ -303,15 +201,11 @@ def get_similarity_matrix(args):
 
     
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
-    # global q_mat
-    # global q_hashes
     q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
-    logger.info(f'q_mat has shape: {q_mat.shape}')
+
+    logger.info(f"#docs: {len(doc_ids)} ----- #question_tokens: {len(question_tokens)} ----- #embedded_tokens: {q_mat.shape[0]}")
     logger.info("Computing sparse lil matrix entries")
-    count = 0
-    # with tqdm(total=len(doc_ids)) as pbar:
-    # tok_class, db_class, db_opts = tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}
-    # results = []
+
     matrix = sp.lil_matrix((args.hash_size, len(doc_ids)))
     for doc_id in tqdm(doc_ids, total=len(doc_ids)):
         cosine_sim = similarity(q_mat,q_hashes, encoder, doc_id)
@@ -366,29 +260,17 @@ if __name__ == '__main__':
 
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
 
-    logging.info('Counting words...')
-    count_matrix, doc_dict = get_count_matrix(
-        args, 'sqlite', {'db_path': args.db_path}
-    )
-
-    logger.info('Making alignment vectors...')
-    
     alignment = get_similarity_matrix(args)
 
-    logger.info('Getting word-doc frequencies...')
-    freqs = get_doc_freqs(count_matrix)
-
     basename = os.path.splitext(os.path.basename(args.db_path))[0]
-    basename += ('-alignment-ngram=%d-embedding=%s-tokenizer=%s' %
-                 (args.ngram, args.embedding, args.tokenizer))
+    basename += ('-alignment-embedding=%s-tokenizer=%s' %
+                 (args.embedding, args.tokenizer))
     filename = os.path.join(args.out_dir, basename)
 
     logger.info('Saving to %s.npz' % filename)
     metadata = {
-        'doc_freqs': freqs,
         'tokenizer': args.tokenizer,
         'hash_size': args.hash_size,
         'ngram': args.ngram,
-        'doc_dict': doc_dict
     }
     retriever.utils.save_sparse_csr(filename, alignment, metadata)
