@@ -319,7 +319,7 @@ def get_similarity_matrix(args):
             assert(len(q_hashes)==len(cosine_sim))
             for i in range(0, len(q_hashes)):
                 row = q_hashes[i]
-                col = doc_id
+                col = int(doc_id)
                 data = cosine_sim[i]
                 matrix[row,col] = data
     logger.info("Convert to sparse csr matrix")
