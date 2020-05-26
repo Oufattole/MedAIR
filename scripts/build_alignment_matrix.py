@@ -278,7 +278,7 @@ def similarity(q_mat, q_hashes, encoder, doc_id):
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(len(q_hashes)==q_mat.shape[0])
         assert(cosine_sim.size==len(q_hashes))
-        return q_hashes, [doc_id]*len(q_hashes), cosine_sim
+        return doc_id, cosine_sim
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
 
@@ -312,13 +312,13 @@ def get_similarity_matrix(args):
     _similarity = partial(similarity, q_mat, q_hashes, encoder)
     count = 0
     # with tqdm(total=len(doc_ids)) as pbar:
-    with ProcessPool(args.num_workers) as workers:
-        results = tqdm(workers.map(_similarity, doc_ids), total=len(doc_ids)) # for doc_id in tqdm(doc_ids):
-    assert(len(results) == len(doc_ids))
-    for b_row, b_col, b_data in results:
-        row.extend(b_row)
-        col.extend(b_col)
-        data.extend(b_data)
+    with ProcessPool(args.num_workers) as workers
+        for doc_id, cosine_sim in tqdm(workers.imap_unordered(_similarity, doc_ids), total=len(doc_ids)):
+            b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
+            assert(len(b_row) == len(b_data))
+            row.extend(b_row)
+            col.extend(b_col)
+            data.extend(b_data)
     logger.info('Read %d docs.' % count)
     logger.info('Storing')
     assert(len(data) == len(row))
@@ -326,7 +326,6 @@ def get_similarity_matrix(args):
     matrix = sp.csr_matrix(
         (data, (row, col)), shape=(args.hash_size, len(doc_ids))
     )
-    logger.info('Success!')
     return matrix
 
 
