@@ -15,7 +15,6 @@ import logging
 
 from multiprocessing import Pool as ProcessPool
 from multiprocessing.util import Finalize
-from tqdm import tqdm
 from functools import partial
 from collections import Counter
 from gensim.models.wrappers import FastText
@@ -38,9 +37,7 @@ logger.addHandler(console)
 # ------------------------------------------------------------------------------
 # Multiprocessing functions
 # ------------------------------------------------------------------------------
-q_hashes = None
-q_mat = None
-encoder = None
+
 DOC2IDX = None
 PROCESS_TOK = None
 PROCESS_DB = None
@@ -99,11 +96,11 @@ def load_biowv():
     return wv_from_bin
 
 def load_bio_wiki():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format("/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True)  # C bin format
     return wv_from_bin
 
 def load_bio():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/PubMed-and-PMC-w2v.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format("/embeddings/PubMed-and-PMC-w2v.bin", binary=True)  # C bin format
     return wv_from_bin
 
 def get_question_tokens():
@@ -177,9 +174,7 @@ def get_count_matrix(args, db, db_opts):
     # Setup worker pool
     tok_class = tokenizers.get_class(args.tokenizer)
     workers = ProcessPool(
-        args.num_workers,
-        initializer=init,
-        initargs=(tok_class, db_class, db_opts)
+        args.num_workers
     )
 
     # Compute the count matrix in steps (to keep in memory)
@@ -240,7 +235,7 @@ def generate_question_token_matrix(encoder, hash_size, question_tokens):
     q_hashes = []
     for token in question_tokens:
         try:
-            embedded_token = np.array(encoder[token])
+            embedded_token = np.array([encoder[token]])
         except:
             continue
         q_hashes.append(retriever.utils.hash(token, hash_size))
@@ -271,18 +266,16 @@ def score_doc(encoder,hash_size, batch, doc_id):
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
         assert(cosine_sim.size==len(q_hashes))
         return q_hashes, [doc_id]*len(q_hashes), cosine_sim
-def similarity(doc_id):
-    global q_mat, q_hashes, encoder
-    c_mat = get_doc_matrix(encoder, doc_id)
+def similarity(q_mat, c_mat, q_hashes, doc_id):
     if c_mat is None:
-        return None, None
+        row, col, data = [], [], []
+        return row, col, data 
     else:
         # logging.info(f"cmat: {c_mat.shape}")
         # logging.info(f"q_mat: {q_mat.shape}")
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1)
-        assert(len(q_hashes)==q_mat.shape[0])
         assert(cosine_sim.size==len(q_hashes))
-        return doc_id, cosine_sim
+        return q_hashes, [doc_id]*len(q_hashes), cosine_sim
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
 
@@ -293,46 +286,43 @@ def get_similarity_matrix(args):
     """
     logger.info(f"Number of docs: {len(PROCESS_DB.get_doc_ids())}")
     logger.info(f'Loading embedding word vectors {args.embedding}')
-    global encoder
     encoder = load_emb(args.embedding)
     
     logger.info(f'Loading question tokens')
     question_tokens = list(get_question_tokens())
     logger.info(f"number of question tokens loaded: {len(question_tokens)}")
 
+    # logger.info(f'Loading corpus tokens')
+    # corpus_tokens = get_corpus_tokens(args)
+    # logger.info(f"number of corpus tokens: {len(corpus_tokens)}")
+    # cosine_sim_data, q_token_hash_row, c_token_hash_col = [], [], []
     logger.info('Constructing question token to doc id alignment sparse matrix')
     doc_ids = PROCESS_DB.get_doc_ids()
-
-    
+    row, col, data = [], [], []
+    # step = max(int(len(question_tokens) / 1000), 1)
+    # _score = partial(score, encoder, args.hash_size)
+    # batches = [question_tokens[i:i + step] for i in range(0, len(question_tokens), step)]
+    # workers = ProcessPool(
+    #     args.num_workers
+    # )
+    count = 0
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
-    global q_mat
-    global q_hashes
     q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
     logger.info(f'q_mat has shape: {q_mat.shape}')
     logger.info('Calculating similarity')
-    count = 0
-    # with tqdm(total=len(doc_ids)) as pbar:
-    tok_class, db_class, db_opts = tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}
-    results = []
-    with ProcessPool(args.num_workers, initializer=init, initargs=(tok_class, db_class, db_opts)) as workers:
-        for doc_id, cosine_sim in tqdm(workers.imap_unordered(similarity, doc_ids), total=len(doc_ids)):
-            if (not doc_id is None) and (not cosine_sim is None):
-                results.append((doc_id, cosine_sim))
-    logger.info("Making sparse matrix entries")
-    row, col, data = [], [], []
-    for doc_id, cosine_sim in results:
-        b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
-        assert(len(b_row) == len(b_data))
+    for doc_id in doc_ids:
+        c_mat = get_doc_matrix(encoder, doc_id)
+        b_row, b_col, b_data = similarity(q_mat, c_mat, q_hashes, doc_id)
         row.extend(b_row)
         col.extend(b_col)
         data.extend(b_data)
-    logger.info('Storing')
-    assert(len(data) == len(row))
-    assert(len(row) == len(col))
+    # workers.close()
+    # workers.join()
+
     matrix = sp.csr_matrix(
         (data, (row, col)), shape=(args.hash_size, len(doc_ids))
     )
-    return matrix
+    return row, col, data
 
 
 def get_doc_freqs(cnts):
@@ -374,10 +364,10 @@ if __name__ == '__main__':
 
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
 
-    logging.info('Counting words...')
-    count_matrix, doc_dict = get_count_matrix(
-        args, 'sqlite', {'db_path': args.db_path}
-    )
+    # logging.info('Counting words...')
+    # count_matrix, doc_dict = get_count_matrix(
+    #     args, 'sqlite', {'db_path': args.db_path}
+    # )
 
     logger.info('Making alignment vectors...')
     
