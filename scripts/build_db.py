@@ -98,7 +98,7 @@ def store_contents(data_path, save_path, num_workers=None):
     files = [f for f in iter_files(data_path) if f[-4:]==".txt"]
     count = 0
     with tqdm(total=len(files)) as pbar:
-        for entries in tqdm(workers.imap_unordered(get_contents, files)):
+        for entries in tqdm(workers.imap(get_contents, files)):
             count += len(entries)
             c.executemany("INSERT INTO documents VALUES (?,?,?)", entries)
             pbar.update()
