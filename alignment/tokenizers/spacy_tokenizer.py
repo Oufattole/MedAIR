@@ -30,7 +30,6 @@ class SpacyTokenizer(Tokenizer):
             nlp_kwargs['tagger'] = False
         if 'ner' not in self.annotators:
             nlp_kwargs['entity'] = False
-        print(f"model: {model}")
         self.nlp = spacy.load(model, **nlp_kwargs)
 
     def tokenize(self, text):

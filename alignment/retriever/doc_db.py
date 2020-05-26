@@ -48,7 +48,7 @@ class DocDB(object):
         cursor = self.connection.cursor()
         cursor.execute(
             "SELECT text FROM documents WHERE id = ?",
-            (utils.normalize(doc_id),)
+            (utils.normalize(str(doc_id)),)
         )
         result = cursor.fetchone()
         cursor.close()
@@ -59,7 +59,7 @@ class DocDB(object):
         cursor = self.connection.cursor()
         cursor.execute(
             "SELECT filename FROM documents WHERE id = ?",
-            (utils.normalize(doc_id),)
+            (utils.normalize(str(doc_id)),)
         )
         result = cursor.fetchone()
         cursor.close()
