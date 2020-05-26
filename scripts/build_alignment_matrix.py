@@ -312,7 +312,7 @@ def get_similarity_matrix(args):
     _similarity = partial(similarity, q_mat, q_hashes, encoder)
     count = 0
     # with tqdm(total=len(doc_ids)) as pbar:
-    with ProcessPool(args.num_workers) as workers
+    with ProcessPool(args.num_workers) as workers:
         for doc_id, cosine_sim in tqdm(workers.imap_unordered(_similarity, doc_ids), total=len(doc_ids)):
             b_row, b_col, b_data = q_hashes, [doc_id]*len(q_hashes), cosine_sim
             assert(len(b_row) == len(b_data))
