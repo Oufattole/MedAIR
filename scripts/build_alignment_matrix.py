@@ -177,7 +177,9 @@ def get_count_matrix(args, db, db_opts):
     # Setup worker pool
     tok_class = tokenizers.get_class(args.tokenizer)
     workers = ProcessPool(
-        args.num_workers
+        args.num_workers,
+        initializer=init,
+        initargs=(tok_class, db_class, db_opts)
     )
 
     # Compute the count matrix in steps (to keep in memory)
@@ -370,7 +372,7 @@ if __name__ == '__main__':
                         help='Number of CPU processes (for tokenizing, etc)')
     args = parser.parse_args()
 
-    init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
+    # init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
 
     logging.info('Counting words...')
     count_matrix, doc_dict = get_count_matrix(
