@@ -18,9 +18,9 @@ from multiprocessing.util import Finalize
 from tqdm import tqdm
 from functools import partial
 from collections import Counter
-from gensim.models.wrappers import FastText
 from gensim.models import KeyedVectors
 import pandas as pd
+# import tensorflow as tf
 
 from alignment import retriever
 from alignment import tokenizers
@@ -93,7 +93,7 @@ def load_glove_emb():
     return glove
 
 def load_biowv():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True, limit=1000)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True, limit=100_000)  # C bin format
     return wv_from_bin
 
 def load_bio_wiki():
@@ -159,6 +159,23 @@ def get_doc_matrix(embedding, doc_id):
             matrix = np.vstack((matrix, token_emb))
     return matrix
 
+def generate_doc_tensor(embedding, doc_ids):
+    # doc_tensor = tf.RaggedTensor
+    doc_tensor = None
+    # for doc_id in doc_ids:
+    #     print(doc_id)
+    #     doc_matrix = get_doc_matrix(embedding, doc_id)
+        
+    #     if not doc_matrix is None:
+    #         print(doc_matrix.shape)
+    #         doc_matrix = doc_matrix.T
+    #         if doc_tensor is None:
+    #             doc_tensor = doc_matrix
+    #         else:
+    #             doc_tensor = np.stack([doc_tensor, doc_matrix], axis=2)
+    return doc_tensor
+
+
 def generate_question_token_matrix(encoder, hash_size, question_tokens):
     q_mat = []
     q_hashes = []
@@ -171,18 +188,18 @@ def generate_question_token_matrix(encoder, hash_size, question_tokens):
         embedded_token = embedded_token/np.linalg.norm(embedded_token)
         q_mat.append(embedded_token)
     return np.array(q_mat), q_hashes
-def similarity(q_mat,q_hashes, encoder, doc_id):
+def similarity(q_mat,check, encoder, doc_id):
     # global q_mat, q_hashes, encoder
     c_mat = get_doc_matrix(encoder, doc_id)
     if c_mat is None:
-        return None
+        return None, None
     else:
         # logging.info(f"cmat: {c_mat.shape}")
         # logging.info(f"q_mat: {q_mat.shape}")
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1).tolist()
-        assert(len(q_hashes)==q_mat.shape[0])
-        assert(len(cosine_sim)==len(q_hashes))
-        return cosine_sim
+        assert(check==q_mat.shape[0])
+        assert(len(cosine_sim)==check)
+        return cosine_sim, doc_id
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
 
@@ -196,30 +213,40 @@ def get_similarity_matrix(args):
     encoder = load_emb(args.embedding)
     
     logger.info(f'Loading question tokens')
-    question_tokens = list(get_question_tokens())
+    question_tokens = get_question_tokens()
 
-    doc_ids = [i for i in range(1000)]
+    doc_ids = [i for i in range(100_000)]
 
     
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
     q_mat, q_hashes = generate_question_token_matrix(encoder, args.hash_size, question_tokens)
 
-    logger.info(f"#docs: {len(doc_ids)} ----- #question_tokens: {len(question_tokens)} ----- #embedded_tokens: {q_mat.shape[0]}")
-    logger.info("Computing sparse lil matrix entries")
 
-    matrix = sp.lil_matrix((args.hash_size, len(doc_ids)))
-    for doc_id in tqdm(doc_ids, total=len(doc_ids)):
-        cosine_sim = similarity(q_mat,q_hashes, encoder, doc_id)
+    # logger.info(f'Loading doc tensor for {len(doc_ids)} doc_ids')
+    # doc_tensor = generate_doc_tensor(encoder, doc_ids)
+    # logger.info(f"q_mat: {q_mat.shape} ----- doc_tensor: {doc_tensor.shape}")
+    logger.info(f"#docs: {len(doc_ids)} ----- #question_tokens: {len(question_tokens)} ----- #embedded_tokens: {q_mat.shape[0]}")
+
+    # product = np.amax(np.matmul(q_mat, doc_tensor), axis=1)
+    # logger.info(f"q_mat: {q_mat.shape} ----- doc_tensor: {doc_tensor.shape} ---- mult: ")
+    logger.info("hash_to_ind")
+    hash_to_ind = np.vstack((np.array(q_hashes), np.array([i for i in range(len(q_hashes))]))).T
+
+    logger.info("allocate array")
+    matrix = np.ndarray(shape=(len(q_hashes), len(doc_ids)), dtype=np.float16)
+
+    logger.info("Computing dense matrix")
+    _similarity = partial(similarity, q_mat,len(q_hashes), encoder)
+    
+    for cosine_sim, doc_id in map(_similarity, tqdm(doc_ids)):
         if (not cosine_sim is None):
             assert(len(q_hashes)==len(cosine_sim))
             for i in range(0, len(q_hashes)):
-                row = q_hashes[i]
+                row = i
                 col = int(doc_id)
                 data = cosine_sim[i]
                 matrix[row,col] = data
-    logger.info("Convert to sparse csr matrix")
-    matrix = matrix.tocsr()
-    return matrix
+    return matrix, hash_to_ind
 
 
 def get_doc_freqs(cnts):
@@ -261,7 +288,7 @@ if __name__ == '__main__':
 
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
 
-    alignment = get_similarity_matrix(args)
+    alignment, hash_to_ind = get_similarity_matrix(args)
 
     basename = os.path.splitext(os.path.basename(args.db_path))[0]
     basename += ('-alignment-embedding=%s-tokenizer=%s' %
