@@ -20,6 +20,7 @@ from functools import partial
 from collections import Counter
 from gensim.models.wrappers import FastText
 from gensim.models import KeyedVectors
+import pandas as pd
 
 from alignment import retriever
 from alignment import tokenizers
@@ -92,7 +93,7 @@ def load_glove_emb():
     return glove
 
 def load_biowv():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True, limit=1000)  # C bin format
     return wv_from_bin
 
 def load_bio_wiki():
@@ -197,7 +198,7 @@ def get_similarity_matrix(args):
     logger.info(f'Loading question tokens')
     question_tokens = list(get_question_tokens())
 
-    doc_ids = PROCESS_DB.get_doc_ids() # [0,1,2,3,4,5,6,7]
+    doc_ids = [i for i in range(1000)]
 
     
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
