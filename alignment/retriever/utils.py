@@ -34,6 +34,13 @@ def save_sparse_csr(filename, matrix, metadata=None):
     }
     np.savez(filename, **data)
 
+def save_dense_array(filename, matrix, hash_to_index, metadata=None):
+    data = {
+        'array' : matrix.data,
+        'shape': matrix.shape,
+        'hash_dict': hash_to_index,
+    }
+    np.savez(filename, **data)
 
 def load_sparse_csr(filename):
     loader = np.load(filename, allow_pickle=True)
