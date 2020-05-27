@@ -36,7 +36,7 @@ def save_sparse_csr(filename, matrix, metadata=None):
 
 def save_dense_array(filename, matrix, hash_to_index, metadata=None):
     data = {
-        'array' : matrix.data,
+        'array' : matrix,
         'shape': matrix.shape,
         'hash_dict': hash_to_index,
     }

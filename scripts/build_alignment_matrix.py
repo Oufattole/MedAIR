@@ -301,4 +301,4 @@ if __name__ == '__main__':
         'hash_size': args.hash_size,
         'ngram': args.ngram,
     }
-    retriever.utils.save_sparse_csr(filename, alignment, metadata)
+    retriever.utils.save_dense_array(filename, alignment, metadata)
