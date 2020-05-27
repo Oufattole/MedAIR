@@ -97,11 +97,11 @@ def load_biowv():
     return wv_from_bin
 
 def load_bio_wiki():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True, limit=1000)  # C bin format
     return wv_from_bin
 
 def load_bio():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/PubMed-and-PMC-w2v.bin", binary=True)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/PubMed-and-PMC-w2v.bin", binary=True, limit=1000)  # C bin format
     return wv_from_bin
 
 def get_question_tokens():
