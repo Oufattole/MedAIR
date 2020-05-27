@@ -110,7 +110,7 @@ def get_question_tokens():
     for filename in question_files:
         # count = 0
         questions = Question.read_jsonl(questions_filepath+"/"+filename)
-        for question in questions[:10]:
+        for question in questions:
             question_tokens.update(set(tokenize(utils.normalize(question.get_prompt())).words()))
             for option in question.get_options():
                 question_tokens.update(set(tokenize(utils.normalize(option)).words()))
