@@ -20,6 +20,7 @@ from functools import partial
 from collections import Counter
 from gensim.models.wrappers import FastText
 from gensim.models import KeyedVectors
+import pandas as pd
 
 from alignment import retriever
 from alignment import tokenizers
