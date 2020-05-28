@@ -20,7 +20,7 @@ from functools import partial
 from collections import Counter
 from gensim.models import KeyedVectors
 import pandas as pd
-# import tensorflow as tf
+import h5py
 
 from alignment import retriever
 from alignment import tokenizers
@@ -215,7 +215,7 @@ def get_similarity_matrix(args):
     logger.info(f'Loading question tokens')
     question_tokens = get_question_tokens()
 
-    doc_ids = [i for i in range(100_000)]
+    doc_ids = [i for i in range(100)]
 
     
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
@@ -230,7 +230,7 @@ def get_similarity_matrix(args):
     # product = np.amax(np.matmul(q_mat, doc_tensor), axis=1)
     # logger.info(f"q_mat: {q_mat.shape} ----- doc_tensor: {doc_tensor.shape} ---- mult: ")
     logger.info("hash_to_ind")
-    hash_to_ind = np.vstack((np.array(q_hashes), np.array([i for i in range(len(q_hashes))]))).T
+    hash_to_ind = np.array(q_hashes)
 
     logger.info("allocate array")
     matrix = np.ndarray(shape=(len(q_hashes), len(doc_ids)), dtype=np.float16)
@@ -287,18 +287,17 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     init(tokenizers.get_class(args.tokenizer), retriever.get_class('sqlite'), {'db_path': args.db_path}) #tmp
-
+    
     alignment, hash_to_ind = get_similarity_matrix(args)
 
-    basename = os.path.splitext(os.path.basename(args.db_path))[0]
-    basename += ('-alignment-embedding=%s-tokenizer=%s' %
-                 (args.embedding, args.tokenizer))
-    filename = os.path.join(args.out_dir, basename)
-
-    logger.info('Saving to %s.npz' % filename)
+    
     metadata = {
         'tokenizer': args.tokenizer,
         'hash_size': args.hash_size,
-        'ngram': args.ngram,
     }
-    retriever.utils.save_dense_array(filename, alignment, metadata)
+    filename = "word_doc_matrix-"+args.embedding
+    logger.info('stored in '+ DATA_DIR +"/table/" + filename)
+    retriever.utils.save_dense_array(filename, alignment, hash_to_ind, metadata)
+    logger.info('finished')
+
+    import pdb; pdb.set_trace()
