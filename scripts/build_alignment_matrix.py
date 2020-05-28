@@ -93,15 +93,15 @@ def load_glove_emb():
     return glove
 
 def load_biowv():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True, limit=100_000)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/BioWordVec_PubMed_MIMICIII_d200.vec.bin", binary = True)  # C bin format
     return wv_from_bin
 
 def load_bio_wiki():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True, limit=1000)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/wikipedia-pubmed-and-PMC-w2v.bin", binary=True)  # C bin format
     return wv_from_bin
 
 def load_bio():
-    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/PubMed-and-PMC-w2v.bin", binary=True, limit=1000)  # C bin format
+    wv_from_bin = KeyedVectors.load_word2vec_format(DATA_DIR+"/embeddings/PubMed-and-PMC-w2v.bin", binary=True)  # C bin format
     return wv_from_bin
 
 def get_question_tokens():
@@ -111,7 +111,7 @@ def get_question_tokens():
     for filename in question_files:
         # count = 0
         questions = Question.read_jsonl(questions_filepath+"/"+filename)
-        for question in questions[:1000]:
+        for question in questions:
             question_tokens.update(set(tokenize(utils.normalize(question.get_prompt())).words()))
             for option in question.get_options():
                 question_tokens.update(set(tokenize(utils.normalize(option)).words()))
@@ -215,7 +215,7 @@ def get_similarity_matrix(args):
     logger.info(f'Loading question tokens')
     question_tokens = get_question_tokens()
 
-    doc_ids = [i for i in range(100)]
+    doc_ids = [i for i in range(len(PROCESS_DB.get_doc_ids()))]
 
     
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
@@ -299,5 +299,3 @@ if __name__ == '__main__':
     logger.info('stored in '+ DATA_DIR +"/table/" + filename)
     retriever.utils.save_dense_array(filename, alignment, hash_to_ind, metadata)
     logger.info('finished')
-
-    import pdb; pdb.set_trace()
