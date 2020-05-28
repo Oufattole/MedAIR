@@ -197,8 +197,8 @@ def similarity(q_mat,check, encoder, doc_id):
         # logging.info(f"cmat: {c_mat.shape}")
         # logging.info(f"q_mat: {q_mat.shape}")
         cosine_sim = np.amax(np.matmul(q_mat, c_mat.T), axis=1).tolist()
-        assert(check==q_mat.shape[0])
-        assert(len(cosine_sim)==check)
+        # assert(check==q_mat.shape[0])
+        # assert(len(cosine_sim)==check)
         return cosine_sim, doc_id
 def get_similarity_matrix(args):
     """Convert the word count matrix into tfidf one.
@@ -215,7 +215,7 @@ def get_similarity_matrix(args):
     logger.info(f'Loading question tokens')
     question_tokens = get_question_tokens()
 
-    doc_ids = [i for i in range(100)]
+    doc_ids = [i for i in range(100_000)]
 
     
     logger.info(f'Loading q_mat for {len(question_tokens)} tokens')
@@ -240,12 +240,8 @@ def get_similarity_matrix(args):
     
     for cosine_sim, doc_id in map(_similarity, tqdm(doc_ids)):
         if (not cosine_sim is None):
-            assert(len(q_hashes)==len(cosine_sim))
-            for i in range(0, len(q_hashes)):
-                row = i
-                col = int(doc_id)
-                data = cosine_sim[i]
-                matrix[row,col] = data
+            # assert(len(q_hashes)==len(cosine_sim))
+            matrix[:,doc_id] = cosine_sim
     return matrix, hash_to_ind
 
 
@@ -300,4 +296,4 @@ if __name__ == '__main__':
     retriever.utils.save_dense_array(filename, alignment, hash_to_ind, metadata)
     logger.info('finished')
 
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
