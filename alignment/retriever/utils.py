@@ -13,6 +13,7 @@ import scipy.sparse as sp
 from sklearn.utils import murmurhash3_32
 from gensim.models.wrappers import FastText
 import os
+import h5py
 
 from alignment import DATA_DIR
 from alignment.retriever.question import Question
@@ -35,12 +36,19 @@ def save_sparse_csr(filename, matrix, metadata=None):
     np.savez(filename, **data)
 
 def save_dense_array(filename, matrix, hash_to_index, metadata=None):
+    with h5py.File(DATA_DIR+"/table/"+filename +'.hdf5', 'w') as f:
+        dset = f.create_dataset("zipped", data=matrix, compression="gzip")
     data = {
-        'array' : matrix,
-        'shape': matrix.shape,
-        'hash_dict': hash_to_index,
+        'data': hash_to_index,
+        'metadata': metadata,
     }
-    np.savez(filename, **data)
+    np.savez(DATA_DIR+"/table/"+filename +'.npz', **data)
+
+def load_dense_array(filename):
+    f = h5py.File(DATA_DIR+"/table/"+filename +'.hdf5', 'r')
+    dset = f['zipped']
+    loader = np.load(DATA_DIR+"/table/"+filename +'.npz', allow_pickle=True)
+    return dset, loader['data'], loader['metadata'] if 'metadata' in loader else None
 
 def load_sparse_csr(filename):
     loader = np.load(filename, allow_pickle=True)
