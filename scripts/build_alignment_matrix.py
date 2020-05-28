@@ -241,11 +241,7 @@ def get_similarity_matrix(args):
     for cosine_sim, doc_id in map(_similarity, tqdm(doc_ids)):
         if (not cosine_sim is None):
             assert(len(q_hashes)==len(cosine_sim))
-            for i in range(0, len(q_hashes)):
-                row = i
-                col = int(doc_id)
-                data = cosine_sim[i]
-                matrix[row,col] = data
+            matrix[:,doc_id] = cosine_sim
     return matrix, hash_to_ind
 
 
