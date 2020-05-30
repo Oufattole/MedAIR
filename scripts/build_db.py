@@ -66,7 +66,7 @@ def get_contents(filename):
             # Parse document
             doc = line
             # Skip if it is empty or None
-            if not doc or len(doc) == 0:
+            if not doc or len(doc) == 0 or doc=="\n":
                 continue
             # Add the document
             documents.append((str(next_doc_id), doc, filename))
