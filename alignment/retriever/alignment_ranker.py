@@ -80,14 +80,14 @@ class AlignmentDocRanker(object):
         es_query = Q('match', body=input_query)
         search = Search(using=es, index="corpus").query(es_query).source(False)[:self.es_topn]
         hits = search.execute()
-        doc_ids = [int(hit.meta.id) for hit in hits]
+        doc_ids = np.array([int(hit.meta.id) for hit in hits])
         doc_ids.sort()
         tokens = list(tokenizer.tokenize(input_query).words()) # globalize tokenize with init
         valid_hashes = [utils.hash(token, self.hash_size) for token in tokens if utils.hash(token, self.hash_size) in hash_to_ind]
-        valid_hash_inds = [hash_to_ind[token_hash] for token_hash in valid_hashes]
+        valid_hash_inds = np.array([hash_to_ind[token_hash] for token_hash in valid_hashes])
         valid_hash_inds.sort()
         # retrieve matrix
-        cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
+        cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
         # retrieve idfs
         num_docs = matrix.shape[1]
         Ns = np.array([freq_table[token_hash] for token_hash in valid_hashes]) #doc frequencies array same order as 
