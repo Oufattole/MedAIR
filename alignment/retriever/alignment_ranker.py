@@ -87,7 +87,7 @@ class AlignmentDocRanker(object):
         valid_hash_inds = [hash_to_ind[token_hash] for token_hash in valid_hashes]
         valid_hash_inds.sort()
         # retrieve matrix
-        cos_sim_matrix = matrix[valid_hash_inds,doc_ids]
+        cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
         # retrieve idfs
         num_docs = matrix.shape[1]
         Ns = np.array([freq_table[token_hash] for token_hash in valid_hashes]) #doc frequencies array same order as 
@@ -160,5 +160,9 @@ class AlignmentDocRanker(object):
 if __name__ == "__main__":
     embedding = "bio-wv"
     air = AlignmentDocRanker(embedding)
+    x = air.solve_dev_set()
+    print(x)
+    x = air.solve_dev_set()
+    print(x)
     x = air.solve_dev_set()
     print(x)
