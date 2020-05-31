@@ -22,6 +22,9 @@ from alignment import tokenizers
 from question import Question
 from alignment import DATA_DIR
 
+tracer = logging.getLogger('elasticsearch')
+tracer.setLevel(logging.CRITICAL) # or desired level
+tracer.addHandler(logging.FileHandler('indexer.log'))
 
 
 logger = logging.getLogger()
@@ -42,12 +45,13 @@ class AlignmentDocRanker(object):
             tfidf_path: path to saved model file
             strict: fail on empty queries or continue (and return empty result)
         """
+        self.embedding = embedding
         alignment_filename = "word_doc_matrix-" + embedding
         logger.info(f'Loading {embedding} matrix')
-        self.matrix, hash_to_ind, metadata = utils.load_dense_array(alignment_filename)
+        matrix, hash_to_ind, metadata = utils.load_dense_array(alignment_filename)
         self.hash_to_ind = {hash_to_ind[i]:i for i in range(hash_to_ind.size)}
         # import pdb; pdb.set_trace()
-
+        self.matrix = matrix[:,:]
         tokenizer_type = metadata["tokenizer"]
         self.tokenizer = tokenizers.get_class(tokenizer_type)()
         self.hash_size = metadata["hash_size"]
@@ -83,7 +87,7 @@ class AlignmentDocRanker(object):
         valid_hash_inds = [hash_to_ind[token_hash] for token_hash in valid_hashes]
         valid_hash_inds.sort()
         # retrieve matrix
-        cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
+        cos_sim_matrix = matrix[valid_hash_inds,doc_ids]
         # retrieve idfs
         num_docs = matrix.shape[1]
         Ns = np.array([freq_table[token_hash] for token_hash in valid_hashes]) #doc frequencies array same order as 
@@ -109,8 +113,9 @@ class AlignmentDocRanker(object):
         return question_object.is_answer(search_answer)
 
     def solve_dev_set(self):
+        logger.info(f'Solving dev set for {self.embedding}')
         question_filename = "/questions/dev.jsonl"
-        questions = Question.read_jsonl(DATA_DIR + question_filename)[:10]
+        questions = Question.read_jsonl(DATA_DIR + question_filename)
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
@@ -122,8 +127,9 @@ class AlignmentDocRanker(object):
 
         return correct/total
     def solve_test_set(self):
+        logger.info(f'Solving test set for {self.embedding}')
         question_filename = "/questions/test.jsonl"
-        questions = Question.read_jsonl(DATA_DIR + question_filename)[:10]
+        questions = Question.read_jsonl(DATA_DIR + question_filename)
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
@@ -135,8 +141,9 @@ class AlignmentDocRanker(object):
 
         return correct/total
     def solve_train_set(self):
+        logger.info(f'Solving training set for {self.embedding}')
         question_filename = "/questions/train.jsonl"
-        questions = Question.read_jsonl(DATA_DIR + question_filename)[:10]
+        questions = Question.read_jsonl(DATA_DIR + question_filename)
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
