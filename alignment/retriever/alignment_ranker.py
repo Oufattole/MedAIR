@@ -118,6 +118,33 @@ class AlignmentDocRanker(object):
             total +=1
             correct += 1 if self.solve_question(question) else 0
             pbar.set_description(f'accuracy (accuracy={correct/total})')
+            pbar.update()
+
+        return correct/total
+    def solve_test_set(self):
+        question_filename = "/questions/test.jsonl"
+        questions = Question.read_jsonl(DATA_DIR + question_filename)[:10]
+        total = 0
+        correct = 0 
+        pbar = tqdm(questions, desc='accuracy', total = len(questions))
+        for question in pbar:
+            total +=1
+            correct += 1 if self.solve_question(question) else 0
+            pbar.set_description(f'accuracy (accuracy={correct/total})')
+            pbar.update()
+
+        return correct/total
+    def solve_train_set(self):
+        question_filename = "/questions/train.jsonl"
+        questions = Question.read_jsonl(DATA_DIR + question_filename)[:10]
+        total = 0
+        correct = 0 
+        pbar = tqdm(questions, desc='accuracy', total = len(questions))
+        for question in pbar:
+            total +=1
+            correct += 1 if self.solve_question(question) else 0
+            pbar.set_description(f'accuracy (accuracy={correct/total})')
+            pbar.update()
 
         return correct/total
 
