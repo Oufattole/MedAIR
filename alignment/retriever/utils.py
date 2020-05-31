@@ -48,7 +48,7 @@ def load_dense_array(filename):
     f = h5py.File(DATA_DIR+"/table/"+filename +'.hdf5', 'r')
     dset = f['zipped']
     loader = np.load(DATA_DIR+"/table/"+filename +'.npz', allow_pickle=True)
-    return dset, loader['data'], loader['metadata'] if 'metadata' in loader else None
+    return dset, loader['data'], loader['metadata'].item(0) if 'metadata' in loader else None
 
 def load_sparse_csr(filename):
     loader = np.load(filename, allow_pickle=True)
@@ -62,6 +62,9 @@ def save_word_freq(filename, freqs, metadata):
         'metadata': metadata,
     }
     np.savez(filename, **data)
+def load_word_freq(filename):
+    loader = np.load(filename, allow_pickle=True)
+    return loader['word_freq']
 
 
 # ------------------------------------------------------------------------------
