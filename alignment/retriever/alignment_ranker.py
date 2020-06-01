@@ -66,8 +66,8 @@ class AlignmentDocRanker(object):
         logger.info(f'Loading word frequency table')
         word_freq_filename = DATA_DIR +"/corpus"+ basename
         self.freq_table = utils.load_word_freq(word_freq_filename)
-        self.es_topn = 10000
-        self.topn = 30
+        self.es_topn = 1000
+        self.topn = 100
 
     def score_query(self, input_query, doc_ids):
         """
