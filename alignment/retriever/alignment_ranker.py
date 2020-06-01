@@ -89,7 +89,7 @@ class AlignmentDocRanker(object):
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
         with Pool(processes=self.num_workers,initializer=init,initargs=(self.matrix,self.matrix_shape)) as pool:
-            _solve = partial(solve_question, self.hash_to_ind, self.freq_table, self.tokenizer, self.es, self.es_topn, self.topn,self.hash_size)
+            _solve = partial(solve_question, self.hash_to_ind, self.freq_table, self.tokenizer, self.es_topn, self.topn,self.hash_size)
             for result in pool.imap(_solve, pbar):
                 total +=1
                 correct += 1 if result else 0
@@ -113,7 +113,8 @@ class AlignmentDocRanker(object):
         questions = Question.read_jsonl(DATA_DIR + question_filename)
         return self.solve_question_set(questions)
 
-def solve_question(hash_to_ind, freq_table, tokenizer, es, es_topn, topn, hash_size, question_object):
+def solve_question(hash_to_ind, freq_table, tokenizer, es_topn, topn, hash_size, question_object):
+    es = Elasticsearch()
     options = list(question_object.get_options())
     queries = [question_object.prompt + " " + option for option in options]
     _solve = partial(score_query, hash_to_ind, freq_table, tokenizer, es, es_topn, topn, hash_size)
