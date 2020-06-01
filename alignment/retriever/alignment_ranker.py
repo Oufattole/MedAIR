@@ -29,21 +29,11 @@ tracer.addHandler(logging.FileHandler('indexer.log'))
 
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 fmt = logging.Formatter('%(asctime)s: [ %(message)s ]', '%m/%d/%Y %I:%M:%S %p')
 console = logging.StreamHandler()
 console.setFormatter(fmt)
 logger.addHandler(console)
-
-shared_matrix = None
-shared_matrix_shape =  None
-
-def init_worker(X, X_shape):
-    # use global variables.
-    global shared_matrix
-    global shared_matrix_shape
-    shared_matrix = X
-    shared_matrix_shape = X_shape
 
 class AlignmentDocRanker(object):
     """Loads a pre-weighted inverted index of token/document terms.
@@ -64,12 +54,10 @@ class AlignmentDocRanker(object):
         self.hash_to_ind = {hash_to_ind[i]:i for i in range(hash_to_ind.size)}
         # import pdb; pdb.set_trace()
         logger.info(f'Allocate RawArray')
-        global shared_matrix
-        global shared_matrix_shape
-        shared_matrix = RawArray(c.c_float, matrix.shape[0]*matrix.shape[1])
-        shared_matrix_shape = matrix.shape
+        self.matrix = RawArray(c.c_double, matrix.shape[0]*matrix.shape[1])
+        self.matrix_shape = matrix.shape
         logger.info(f'make wrapper')
-        matrix_wrapper = np.frombuffer(shared_matrix).reshape(matrix.shape)
+        matrix_wrapper = np.frombuffer(self.matrix).reshape(matrix.shape)
         logger.info(f'copy to RawArray')
         np.copyto(matrix_wrapper, matrix[:,:])
         # self.matrix = matrix
@@ -95,9 +83,7 @@ class AlignmentDocRanker(object):
 
         """
         # logger.debug(f'es_search')
-        global shared_matrix
-        global shared_matrix_shape
-        hash_to_ind, freq_table, matrix = self.hash_to_ind, self.freq_table, np.frombuffer(shared_matrix).reshape(shared_matrix_shape)
+        hash_to_ind, freq_table, matrix = self.hash_to_ind, self.freq_table, np.frombuffer(self.matrix).reshape(self.matrix_shape)
         tokenizer = self.tokenizer
         es = self.es
         #formulate search query
@@ -142,9 +128,7 @@ class AlignmentDocRanker(object):
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        global shared_matrix
-        global shared_matrix_shape
-        with Pool(processes=self.num_workers, initializer=init_worker, initargs=(shared_matrix, shared_matrix_shape)) as pool:
+        with Pool(processes=self.num_workers) as pool:
             for result in pool.imap(self.solve_question, pbar):
                 total +=1
                 correct += 1 if result else 0
