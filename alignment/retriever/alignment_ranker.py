@@ -16,6 +16,8 @@ import h5py
 from elasticsearch import Elasticsearch, helpers
 from elasticsearch_dsl import Q, Search, MultiSearch
 from tqdm import tqdm
+import nltk
+from nltk import word_tokenize
 
 import utils
 from alignment import tokenizers
@@ -39,13 +41,14 @@ class AlignmentDocRanker(object):
     Scores new queries by taking sparse dot products.
     """
 
-    def __init__(self, embedding):
+    def __init__(self, embedding, tokenize):
         """
         Args:
             tfidf_path: path to saved model file
             strict: fail on empty queries or continue (and return empty result)
         """
         self.num_workers = 8
+        self.tokenize=tokenize
         self.embedding = embedding
         alignment_filename = "word_doc_matrix-" + embedding
         logger.info(f'Loading {embedding} matrix')
@@ -113,7 +116,7 @@ class AlignmentDocRanker(object):
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        _es_search = partial(es_search, self.es_topn)
+        _es_search = partial(es_search, self.es_topn, self.tokenize)
         with Pool(self.num_workers) as workers:
             for question, queries, options, options_doc_ids in workers.imap_unordered(_es_search, pbar):
                 result = self.solve_question(question, queries, options, options_doc_ids)
@@ -138,9 +141,16 @@ class AlignmentDocRanker(object):
         question_filename = "/questions/train.jsonl"
         questions = Question.read_jsonl(DATA_DIR + question_filename)
         return self.solve_question_set(questions)
-def es_search(es_topn, question):
+def es_search(es_topn, tokenize, question):
     options = list(question.get_options())
-    queries = [question.prompt + " " + option for option in options]
+    queries = []
+    if tokenize:
+        prompt = question.prompt
+        pos_tags_list = nltk.pos_tag(word_tokenize(prompt))
+        question_nouns = " ".join([word[0] for word in pos_tags_list if word[1] in ["NN", "JJ","NNS","IN"]])
+        queries = [question_nouns + " " + option for option in options]
+    else:
+        queries = [question.prompt + " " + option for option in options]
     es = Elasticsearch()
     options_doc_ids = []
     for input_query in queries:
@@ -157,11 +167,12 @@ def es_search(es_topn, question):
 
 if __name__ == "__main__":
     embeddings = ["bio-wv", "pubmed-pmc-wv", "wiki-pubmed-pmc-wv", "glove"]
-    embedding = "bio-wv"
-    air = AlignmentDocRanker(embedding)
-    x = air.solve_dev_set()
-    print(x)
-    x = air.solve_test_set()
-    print(x)
-    x = air.solve_train_set()
-    print(x)
+    tokenize = True
+    for embedding in embeddings:
+        air = AlignmentDocRanker(embedding, tokenize)
+        x = air.solve_dev_set()
+        print(x)
+        x = air.solve_test_set()
+        print(x)
+        x = air.solve_train_set()
+        print(x)
