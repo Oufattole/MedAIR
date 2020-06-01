@@ -45,6 +45,7 @@ class AlignmentDocRanker(object):
             tfidf_path: path to saved model file
             strict: fail on empty queries or continue (and return empty result)
         """
+        self.num_workers = 8
         self.embedding = embedding
         alignment_filename = "word_doc_matrix-" + embedding
         logger.info(f'Loading {embedding} matrix')
@@ -113,12 +114,13 @@ class AlignmentDocRanker(object):
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
         _es_search = partial(es_search, self.es_topn)
-        for question, queries, options, options_doc_ids in map(_es_search, pbar):
-            result = self.solve_question(question, queries, options, options_doc_ids)
-            total +=1
-            correct += 1 if result else 0
-            pbar.set_description(f'accuracy (accuracy={correct/total})')
-            pbar.update()
+        with Pool(self.num_workers) as workers:
+            for question, queries, options, options_doc_ids in workers.imap_unordered(_es_search, pbar):
+                result = self.solve_question(question, queries, options, options_doc_ids)
+                total +=1
+                correct += 1 if result else 0
+                pbar.set_description(f'accuracy (accuracy={correct/total})')
+                pbar.update()
 
         return correct/total
     def solve_dev_set(self):
