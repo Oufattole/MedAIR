@@ -164,7 +164,7 @@ def score_query(hash_to_ind, freq_table, tokenizer, es, es_topn, topn, hash_size
     
     scores = (np.dot(idfs,cos_sim_matrix)) #find correct axis, sum rows
     topn_scores = scores.argsort()[-topn:]
-    logger.info(f'Done')
+    # logger.info(f'Done')
     return np.sum(scores[topn_scores])
 
 
