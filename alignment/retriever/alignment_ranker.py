@@ -97,24 +97,24 @@ class AlignmentDocRanker(object):
         
         scores = (np.dot(idfs,cos_sim_matrix)) #find correct axis, sum rows
         topn_scores = scores.argsort()[-self.topn:]
-        logger.info(f'Done')
+        # logger.info(f'Done')
         return np.sum(scores[topn_scores])
 
-    def solve_question(self, queries, options, options_doc_ids):
+    def solve_question(self, question, queries, options, options_doc_ids):
         scores = [self.score_query(queries[i], options_doc_ids[i]) for i in range(len(queries))]
         high_score = max(scores)
         search_answer = None
         for i in range(len(scores)):
             if scores[i]==high_score:
                 search_answer = options[i]
-        return question_object.is_answer(search_answer)
+        return question.is_answer(search_answer)
     def solve_question_set(self, questions):
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
         _es_search = partial(es_search, self.es_topn)
-        for queries, options, options_doc_ids in map(_es_search, pbar):
-            result = self.solve_question(queries, options, options_doc_ids)
+        for question, queries, options, options_doc_ids in map(_es_search, pbar):
+            result = self.solve_question(question, queries, options, options_doc_ids)
             total +=1
             correct += 1 if result else 0
             pbar.set_description(f'accuracy (accuracy={correct/total})')
@@ -148,7 +148,7 @@ def es_search(es_topn, question):
         doc_ids = np.array([int(hit.meta.id) for hit in hits])
         doc_ids.sort()
         options_doc_ids.append(doc_ids)
-    return queries, options, options_doc_ids
+    return question, queries, options, options_doc_ids
         
 
 
