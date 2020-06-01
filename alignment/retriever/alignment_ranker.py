@@ -112,7 +112,8 @@ class AlignmentDocRanker(object):
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        for queries, options, options_doc_ids in map(es_search, pbar):
+        _es_search = partial(es_search, self.es_topn)
+        for queries, options, options_doc_ids in map(_es_search, pbar):
             result = self.solve_question(queries, options, options_doc_ids)
             total +=1
             correct += 1 if result else 0
@@ -135,14 +136,14 @@ class AlignmentDocRanker(object):
         question_filename = "/questions/train.jsonl"
         questions = Question.read_jsonl(DATA_DIR + question_filename)
         return self.solve_question_set(questions)
-def es_search(question):
+def es_search(es_topn, question):
     options = list(question.get_options())
     queries = [question.prompt + " " + option for option in options]
     es = Elasticsearch()
     options_doc_ids = []
     for input_query in queries:
         es_query = Q('match', body=input_query)
-        search = Search(using=es, index="corpus").query(es_query).source(False)[:self.es_topn]
+        search = Search(using=es, index="corpus").query(es_query).source(False)[:es_topn]
         hits = search.execute()
         doc_ids = np.array([int(hit.meta.id) for hit in hits])
         doc_ids.sort()
