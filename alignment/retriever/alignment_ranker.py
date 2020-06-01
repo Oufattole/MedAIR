@@ -66,7 +66,7 @@ class AlignmentDocRanker(object):
         logger.info(f'Loading word frequency table')
         word_freq_filename = DATA_DIR +"/corpus"+ basename
         self.freq_table = utils.load_word_freq(word_freq_filename)
-        self.es_topn = 1000
+        self.es_topn = 10000
         self.topn = 30
 
     def score_query(self, input_query, doc_ids):
@@ -167,7 +167,7 @@ def es_search(es_topn, tokenize, question):
 
 if __name__ == "__main__":
     embeddings = ["bio-wv", "pubmed-pmc-wv", "wiki-pubmed-pmc-wv", "glove"]
-    tokenize = True
+    tokenize = False
     for embedding in embeddings:
         air = AlignmentDocRanker(embedding, tokenize)
         x = air.solve_dev_set()
