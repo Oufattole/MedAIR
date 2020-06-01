@@ -45,14 +45,15 @@ class AlignmentDocRanker(object):
             tfidf_path: path to saved model file
             strict: fail on empty queries or continue (and return empty result)
         """
+        self.num_workers=1
         self.embedding = embedding
         alignment_filename = "word_doc_matrix-" + embedding
         logger.info(f'Loading {embedding} matrix')
         matrix, hash_to_ind, metadata = utils.load_dense_array(alignment_filename)
         self.hash_to_ind = {hash_to_ind[i]:i for i in range(hash_to_ind.size)}
         # import pdb; pdb.set_trace()
-        # self.matrix = matrix[:,:]
-        self.matrix = matrix
+        self.matrix = matrix[:,:]
+        # self.matrix = matrix
         tokenizer_type = metadata["tokenizer"]
         self.tokenizer = tokenizers.get_class(tokenizer_type)()
         self.hash_size = metadata["hash_size"]
@@ -74,7 +75,7 @@ class AlignmentDocRanker(object):
 
 
         """
-        logger.debug(f'es_search')
+        # logger.debug(f'es_search')
         hash_to_ind, freq_table, matrix = self.hash_to_ind, self.freq_table, self.matrix
         tokenizer = self.tokenizer
         es = self.es
@@ -89,11 +90,11 @@ class AlignmentDocRanker(object):
         valid_hash_inds = np.array([hash_to_ind[token_hash] for token_hash in valid_hashes])
         valid_hash_inds.sort()
         # retrieve matrix
-        # cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
-        logger.debug(f'retrieve up matrix')
-        cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
+        cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
+        # logger.debug(f'retrieve up matrix')
+        # cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
         # retrieve idfs
-        logger.debug(f'Calculate the rest')
+        # logger.debug(f'Calculate the rest')
         num_docs = matrix.shape[1]
         Ns = np.array([freq_table[token_hash] for token_hash in valid_hashes]) #doc frequencies array same order as 
         idfs = np.log((num_docs - Ns + 0.5) / (Ns + 0.5))
@@ -120,11 +121,12 @@ class AlignmentDocRanker(object):
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        for result in map(self.solve_question, pbar):
-            total +=1
-            correct += 1 if result else 0
-            pbar.set_description(f'accuracy (accuracy={correct/total})')
-            pbar.update()
+        with Pool(processes=self.num_workers) as pool:
+            for result in pool.imap(self.solve_question, pbar):
+                total +=1
+                correct += 1 if result else 0
+                pbar.set_description(f'accuracy (accuracy={correct/total})')
+                pbar.update()
 
         return correct/total
     def solve_dev_set(self):
