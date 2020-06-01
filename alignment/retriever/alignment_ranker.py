@@ -55,7 +55,7 @@ class AlignmentDocRanker(object):
             tfidf_path: path to saved model file
             strict: fail on empty queries or continue (and return empty result)
         """
-        self.num_workers=1
+        self.num_workers=30
         self.embedding = embedding
         alignment_filename = "word_doc_matrix-" + embedding
         logger.info(f'Loading {embedding} matrix')
@@ -81,8 +81,6 @@ class AlignmentDocRanker(object):
         self.freq_table = utils.load_word_freq(word_freq_filename)
         self.es_topn = 1000
         self.topn = 30
-        self.es = Elasticsearch()
-
 
     def solve_question_set(self, questions):
         total = 0
