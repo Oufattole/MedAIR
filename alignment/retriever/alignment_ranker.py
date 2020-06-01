@@ -28,7 +28,7 @@ tracer.addHandler(logging.FileHandler('indexer.log'))
 
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 fmt = logging.Formatter('%(asctime)s: [ %(message)s ]', '%m/%d/%Y %I:%M:%S %p')
 console = logging.StreamHandler()
 console.setFormatter(fmt)
@@ -51,7 +51,8 @@ class AlignmentDocRanker(object):
         matrix, hash_to_ind, metadata = utils.load_dense_array(alignment_filename)
         self.hash_to_ind = {hash_to_ind[i]:i for i in range(hash_to_ind.size)}
         # import pdb; pdb.set_trace()
-        self.matrix = matrix[:,:]
+        # self.matrix = matrix[:,:]
+        self.matrix = matrix
         tokenizer_type = metadata["tokenizer"]
         self.tokenizer = tokenizers.get_class(tokenizer_type)()
         self.hash_size = metadata["hash_size"]
@@ -73,6 +74,7 @@ class AlignmentDocRanker(object):
 
 
         """
+        logger.debug(f'es_search')
         hash_to_ind, freq_table, matrix = self.hash_to_ind, self.freq_table, self.matrix
         tokenizer = self.tokenizer
         es = self.es
@@ -87,8 +89,11 @@ class AlignmentDocRanker(object):
         valid_hash_inds = np.array([hash_to_ind[token_hash] for token_hash in valid_hashes])
         valid_hash_inds.sort()
         # retrieve matrix
-        cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
+        # cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
+        logger.debug(f'retrieve up matrix')
+        cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
         # retrieve idfs
+        logger.debug(f'Calculate the rest')
         num_docs = matrix.shape[1]
         Ns = np.array([freq_table[token_hash] for token_hash in valid_hashes]) #doc frequencies array same order as 
         idfs = np.log((num_docs - Ns + 0.5) / (Ns + 0.5))
@@ -98,7 +103,7 @@ class AlignmentDocRanker(object):
         
         scores = (np.dot(idfs,cos_sim_matrix)) #find correct axis, sum rows
         topn_scores = scores.argsort()[-self.topn:]
-        
+        logger.info(f'Done')
         return np.sum(scores[topn_scores])
 
     def solve_question(self, question_object):
@@ -111,58 +116,42 @@ class AlignmentDocRanker(object):
             if scores[i]==high_score:
                 search_answer = options[i]
         return question_object.is_answer(search_answer)
+    def solve_question_set(self, questions):
+        total = 0
+        correct = 0 
+        pbar = tqdm(questions, desc='accuracy', total = len(questions))
+        for result in map(self.solve_question, pbar):
+            total +=1
+            correct += 1 if result else 0
+            pbar.set_description(f'accuracy (accuracy={correct/total})')
+            pbar.update()
 
+        return correct/total
     def solve_dev_set(self):
         logger.info(f'Solving dev set for {self.embedding}')
         question_filename = "/questions/dev.jsonl"
         questions = Question.read_jsonl(DATA_DIR + question_filename)
-        total = 0
-        correct = 0 
-        pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        for question in pbar:
-            total +=1
-            correct += 1 if self.solve_question(question) else 0
-            pbar.set_description(f'accuracy (accuracy={correct/total})')
-            pbar.update()
-
-        return correct/total
+        return self.solve_question_set(questions)
     def solve_test_set(self):
         logger.info(f'Solving test set for {self.embedding}')
         question_filename = "/questions/test.jsonl"
         questions = Question.read_jsonl(DATA_DIR + question_filename)
-        total = 0
-        correct = 0 
-        pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        for question in pbar:
-            total +=1
-            correct += 1 if self.solve_question(question) else 0
-            pbar.set_description(f'accuracy (accuracy={correct/total})')
-            pbar.update()
-
-        return correct/total
+        return self.solve_question_set(questions)
     def solve_train_set(self):
         logger.info(f'Solving training set for {self.embedding}')
         question_filename = "/questions/train.jsonl"
         questions = Question.read_jsonl(DATA_DIR + question_filename)
-        total = 0
-        correct = 0 
-        pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        for question in pbar:
-            total +=1
-            correct += 1 if self.solve_question(question) else 0
-            pbar.set_description(f'accuracy (accuracy={correct/total})')
-            pbar.update()
-
-        return correct/total
+        return self.solve_question_set(questions)
 
 
 
 if __name__ == "__main__":
+    embeddings = ["bio-wv", "pubmed-pmc-wv", "wiki-pubmed-pmc-wv", "glove"]
     embedding = "bio-wv"
     air = AlignmentDocRanker(embedding)
     x = air.solve_dev_set()
     print(x)
-    x = air.solve_dev_set()
+    x = air.solve_test_set()
     print(x)
-    x = air.solve_dev_set()
+    x = air.solve_train_set()
     print(x)
