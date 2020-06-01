@@ -28,7 +28,7 @@ tracer.addHandler(logging.FileHandler('indexer.log'))
 
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 fmt = logging.Formatter('%(asctime)s: [ %(message)s ]', '%m/%d/%Y %I:%M:%S %p')
 console = logging.StreamHandler()
 console.setFormatter(fmt)
@@ -51,8 +51,8 @@ class AlignmentDocRanker(object):
         matrix, hash_to_ind, metadata = utils.load_dense_array(alignment_filename)
         self.hash_to_ind = {hash_to_ind[i]:i for i in range(hash_to_ind.size)}
         # import pdb; pdb.set_trace()
-        # self.matrix = matrix[:,:]
-        self.matrix = matrix
+        self.matrix = matrix[:,:]
+        # self.matrix = matrix
         tokenizer_type = metadata["tokenizer"]
         self.tokenizer = tokenizers.get_class(tokenizer_type)()
         self.hash_size = metadata["hash_size"]
@@ -83,9 +83,9 @@ class AlignmentDocRanker(object):
         valid_hash_inds = np.array([hash_to_ind[token_hash] for token_hash in valid_hashes])
         valid_hash_inds.sort()
         # retrieve matrix
-        # cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
+        cos_sim_matrix = matrix[valid_hash_inds[:,None],doc_ids]
         logger.debug(f'retrieve up matrix')
-        cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
+        # cos_sim_matrix = matrix[:,doc_ids][valid_hash_inds,:]
         # retrieve idfs
         logger.debug(f'Calculate the rest')
         num_docs = matrix.shape[1]
