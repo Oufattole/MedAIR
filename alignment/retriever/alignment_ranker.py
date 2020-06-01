@@ -64,9 +64,8 @@ class AlignmentDocRanker(object):
         self.freq_table = utils.load_word_freq(word_freq_filename)
         self.es_topn = 1000
         self.topn = 30
-        self.es = Elasticsearch()
 
-    def score_query(self, input_query):
+    def score_query(self, input_query, doc_ids):
         """
         query : question + answer
 
@@ -77,13 +76,8 @@ class AlignmentDocRanker(object):
         logger.debug(f'es_search')
         hash_to_ind, freq_table, matrix = self.hash_to_ind, self.freq_table, self.matrix
         tokenizer = self.tokenizer
-        es = self.es
         #formulate search query
-        es_query = Q('match', body=input_query)
-        search = Search(using=es, index="corpus").query(es_query).source(False)[:self.es_topn]
-        hits = search.execute()
-        doc_ids = np.array([int(hit.meta.id) for hit in hits])
-        doc_ids.sort()
+        
         tokens = list(tokenizer.tokenize(input_query).words()) # globalize tokenize with init
         valid_hashes = [utils.hash(token, self.hash_size) for token in tokens if utils.hash(token, self.hash_size) in hash_to_ind]
         valid_hash_inds = np.array([hash_to_ind[token_hash] for token_hash in valid_hashes])
@@ -106,10 +100,8 @@ class AlignmentDocRanker(object):
         logger.info(f'Done')
         return np.sum(scores[topn_scores])
 
-    def solve_question(self, question_object):
-        options = list(question_object.get_options())
-        queries = [question_object.prompt + " " + option for option in options]
-        scores = [self.score_query(query) for query in queries]
+    def solve_question(self, queries, options, options_doc_ids):
+        scores = [self.score_query(queries[i], options_doc_ids[i]) for i in range(len(queries))]
         high_score = max(scores)
         search_answer = None
         for i in range(len(scores)):
@@ -120,7 +112,8 @@ class AlignmentDocRanker(object):
         total = 0
         correct = 0 
         pbar = tqdm(questions, desc='accuracy', total = len(questions))
-        for result in map(self.solve_question, pbar):
+        for queries, options, options_doc_ids in map(es_search, pbar):
+            result = self.solve_question(queries, options, options_doc_ids)
             total +=1
             correct += 1 if result else 0
             pbar.set_description(f'accuracy (accuracy={correct/total})')
@@ -142,6 +135,20 @@ class AlignmentDocRanker(object):
         question_filename = "/questions/train.jsonl"
         questions = Question.read_jsonl(DATA_DIR + question_filename)
         return self.solve_question_set(questions)
+def es_search(question):
+    options = list(question.get_options())
+    queries = [question.prompt + " " + option for option in options]
+    es = Elasticsearch()
+    options_doc_ids = []
+    for input_query in queries:
+        es_query = Q('match', body=input_query)
+        search = Search(using=es, index="corpus").query(es_query).source(False)[:self.es_topn]
+        hits = search.execute()
+        doc_ids = np.array([int(hit.meta.id) for hit in hits])
+        doc_ids.sort()
+        options_doc_ids.append(doc_ids)
+    return queries, options, options_doc_ids
+        
 
 
 
