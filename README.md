@@ -140,11 +140,11 @@ python alignment_ranker.py # currently runs all embeddings, so make sure you per
 <p>
 top 30
    </td>
-   <td><code>bio-wv</code>
+   <td>bio-wv
    </td>
-   <td><code>pubmed-pmc-wv</code>
+   <td>pubmed-pmc-wv
    </td>
-   <td><code>wiki-pubmed-pmc-wv</code>
+   <td>wiki-pubmed-pmc-wv
    </td>
    <td>glove
    </td>
@@ -195,11 +195,11 @@ top 30
 <p>
 top 30
    </td>
-   <td><code>bio-wv</code>
+   <td>bio-wv
    </td>
-   <td><code>pubmed-pmc-wv</code>
+   <td>pubmed-pmc-wv
    </td>
-   <td><code>wiki-pubmed-pmc-wv</code>
+   <td>wiki-pubmed-pmc-wv
    </td>
    <td>glove
    </td>
@@ -250,11 +250,11 @@ top 30
 <p>
 top 100
    </td>
-   <td><code>bio-wv</code>
+   <td>bio-wv
    </td>
-   <td><code>pubmed-pmc-wv</code>
+   <td>pubmed-pmc-wv
    </td>
-   <td><code>wiki-pubmed-pmc-wv</code>
+   <td>wiki-pubmed-pmc-wv
    </td>
    <td>glove
    </td>
@@ -307,11 +307,11 @@ top 30
 <p>
 nltk tokenized
    </td>
-   <td><code>bio-wv</code>
+   <td>bio-wv
    </td>
-   <td><code>pubmed-pmc-wv</code>
+   <td>pubmed-pmc-wv
    </td>
-   <td><code>wiki-pubmed-pmc-wv</code>
+   <td>wiki-pubmed-pmc-wv
    </td>
    <td>glove
    </td>
@@ -319,37 +319,37 @@ nltk tokenized
   <tr>
    <td>dev
    </td>
-   <td><code>25.7</code>
+   <td>25.7
    </td>
-   <td><code>27.2</code>
+   <td>27.2
    </td>
-   <td><code>27.8</code>
+   <td>27.8
    </td>
-   <td><code>26.5</code>
+   <td>26.5
    </td>
   </tr>
   <tr>
    <td>test
    </td>
-   <td><code>26.5</code>
+   <td>26.5
    </td>
-   <td><code>25.7</code>
+   <td>25.7
    </td>
-   <td><code>26.2</code>
+   <td>26.2
    </td>
-   <td><code>25.0</code>
+   <td>25.0
    </td>
   </tr>
   <tr>
    <td>train
    </td>
-   <td><code>26.2</code>
+   <td>26.2
    </td>
-   <td><code>25.6</code>
+   <td>25.6
    </td>
-   <td><code>25.6</code>
+   <td>25.6
    </td>
-   <td><code>25.7</code>
+   <td>25.7
    </td>
   </tr>
 </table>
@@ -363,91 +363,91 @@ nltk tokenized
   <tr>
    <td>topn
    </td>
-   <td><code>100</code>
+   <td>100
    </td>
-   <td><code>40</code>
+   <td>40
    </td>
-   <td><code>30</code>
+   <td>30
    </td>
-   <td><code>20</code>
+   <td>20
    </td>
-   <td><code>10</code>
+   <td>10
    </td>
-   <td><code>100</code>
+   <td>100
    </td>
-   <td><code>30</code>
+   <td>30
    </td>
   </tr>
   <tr>
    <td>nltk tokenize
    </td>
-   <td><code>False</code>
+   <td>False
    </td>
    <td>False
    </td>
-   <td><code>False</code>
+   <td>False
    </td>
-   <td><code>False</code>
+   <td>False
    </td>
-   <td><code>False</code>
+   <td>False
    </td>
-   <td><code>True</code>
+   <td>True
    </td>
-   <td><code>True</code>
+   <td>True
    </td>
   </tr>
   <tr>
    <td>dev
    </td>
-   <td><code>31.1</code>
+   <td>31.1
    </td>
-   <td><code>31.5</code>
+   <td>31.5
    </td>
-   <td><code>32.1</code>
+   <td>32.1
    </td>
-   <td><code>32.2</code>
+   <td>32.2
    </td>
-   <td><code>32.9</code>
+   <td>32.9
    </td>
-   <td><code>30.4</code>
+   <td>30.4
    </td>
-   <td><code>31.9</code>
+   <td>31.9
    </td>
   </tr>
   <tr>
    <td>test
    </td>
-   <td><code>33.5</code>
+   <td>33.5
    </td>
    <td>32.6
    </td>
    <td>33.5
    </td>
-   <td><code>32.7</code>
+   <td>32.7
    </td>
-   <td><code>32.1</code>
+   <td>32.1
    </td>
    <td>32.3
    </td>
-   <td><code>33.2</code>
+   <td>33.2
    </td>
   </tr>
   <tr>
    <td>train
    </td>
-   <td><code>30.9</code>
+   <td>30.9
    </td>
    <td>31.8
    </td>
    <td>32.1
    </td>
-   <td><code>31.5</code>
+   <td>31.5
    </td>
-   <td><code>31.4</code>
+   <td>31.4
    </td>
-   <td><code>30.3</code>
+   <td>30.3
    </td>
-   <td><code>31.5</code>
+   <td>31.5
    </td>
   </tr>
 </table>
